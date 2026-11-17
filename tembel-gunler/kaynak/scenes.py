@@ -233,13 +233,6 @@ def make_s2_fg():
         bd.ellipse((cx - 4, cy - 3, cx + 4, cy + 3), fill=(244, 212, 120, 255))
     base = pixup(base.resize((60, 50), Image.BILINEAR), (240, 200))
     warp_onto(fg, base, [(-10, 950), (240, 960), (300, 1170), (-60, 1160)])
-    # cereal box behind
-    box = Image.new('RGBA', (90, 120), (230, 190, 40, 255))
-    bxd = ImageDraw.Draw(box)
-    bxd.rectangle((0, 40, 90, 80), fill=(40, 80, 170, 255))
-    box = pixup(box.resize((18, 24)), (90, 120))
-    drop_shadow(fg, box, (150, 760), off=(8, 6), blur=5, op=0.5)
-    fg.alpha_composite(box, (150, 760))
     return fg
 
 
