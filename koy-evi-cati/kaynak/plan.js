@@ -100,16 +100,16 @@ poly([[2.9, 3], [3.1, 3], [3.1, 5.2], [2.9, 5.2]], 'secnew');
 poly([[5.8, 3], [6, 3], [6, 3.5], [5.8, 3.5]], 'secnew');
 sl(5.9, 3.55, 5.9, 4.05, 'rail'); sl(5.75, 4.05, 6.05, 4.05, 'rail');
 poly([[5.82, 5.0], [5.98, 5.0], [5.98, 5.2], [5.82, 5.2]], 'secsteel');
-const t = Math.tan(15 * Math.PI / 180), rs = y => 5.37 + (6 - Math.abs(y)) * t;
-sl(-6.6, rs(-6.6), 0, rs(0), 'roof'); sl(0, rs(0), 6.8, rs(6.8), 'roof');
-sl(-6.6, rs(-6.6) - 0.17, 0, rs(0) - 0.17, 'rafter'); sl(0, rs(0) - 0.17, 6.8, rs(6.8) - 0.17, 'rafter');
+const t = Math.tan(15 * Math.PI / 180), rs = y => 5.37 + Math.min(5, 6 - Math.abs(y)) * t;
+sl(-6.6, rs(-6.6), -1, rs(-1), 'roof'); sl(-1, rs(0), 1, rs(0), 'roof'); sl(1, rs(1), 6.6, rs(6.6), 'roof');
+sl(-6.6, rs(-6.6) - 0.17, -1, rs(-1) - 0.17, 'rafter'); sl(-1, rs(0) - 0.17, 1, rs(0) - 0.17, 'rafter'); sl(1, rs(1) - 0.17, 6.6, rs(6.6) - 0.17, 'rafter');
 // dims
 const vd = (z, y0, y1, txt) => { sl(z, y0, z, y1, 'dim'); sl(z - 0.15, y0, z + 0.15, y0, 'dim'); sl(z - 0.15, y1, z + 0.15, y1, 'dim'); const cx = sx(z) - 6, cy = sy((y0 + y1) / 2); o.push(`<text x="${cx}" y="${cy}" class="dimt" transform="rotate(-90 ${cx} ${cy})">${txt}</text>`); };
 vd(-7.4, 3.0, 5.2, '2,20'); vd(-7.4, 0, 3.0, 'mevcut kat');
-vd(0.35, 3.0, rs(0), '≈ 3,98 (mahya)');
+vd(0.35, 3.0, rs(0), '≈ 3,71 (mahya)');
 st(-3.2, 3.6, 'ODALAR', 'secl'); st(4.45, 3.6, 'TERAS', 'secl'); st(-1, 1.3, 'MEVCUT ZEMİN KAT', 'secl');
 st(-3.3, rs(-3.3) + 0.6, 'trapez sac (yalıtımsız)', 'note'); st(3.6, rs(3.6) + 0.6, 'eğim 15° (%27)', 'note');
-st(-2.5, rs(-2.5) - 1.1, 'çelik profil makas + aşık', 'note');
+st(-2.5, rs(-2.5) - 1.1, 'çelik profil mertek + aşık', 'note');
 st(0, -0.8, 'KESİT A-A (ön-arka)', 'secTitle');
 st(-6.3, -0.35, 'BAHÇE', 'note'); st(6.5, -0.35, 'YOL / DENİZ →', 'note');
 const section = o.join('\n');
@@ -134,7 +134,7 @@ body{margin:0;background:#fff;font-family:"DejaVu Sans",Arial,sans-serif}
 <defs><pattern id="tile" width="${0.6 * S}" height="${0.6 * S}" patternUnits="userSpaceOnUse"><rect width="${0.6 * S}" height="${0.6 * S}" fill="#ecd9c6" stroke="#d4bfa8" stroke-width="1"/></pattern>
 <marker id="ar" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#444"/></marker></defs>
 <text x="40" y="52" class="title">ÇATI KATI PLANI — Köy Evi</text>
-<text x="40" y="78" class="sub">10 × 12 m · duvar yüksekliği 2,20 m · çelik profil + trapez sac çatı (yalıtımsız) · ölçek ≈ 1/100</text>
+<text x="40" y="78" class="sub">10 × 12 m · duvar yüksekliği 2,20 m · 4 yöne eğimli kırma çatı, çelik profil + trapez sac (yalıtımsız) · ölçek ≈ 1/100</text>
 ${plan}
 <g transform="translate(0,0)">
 <rect x="880" y="140" width="680" height="390" rx="8" class="box"/>
@@ -149,10 +149,10 @@ ${[['Salon + açık mutfak', '25,3 m²'], ['Yatak odası 1 (manzaralı)', '16,3 
 <text x="1215" y="300" class="li">kesen kör duvar + pencere boşluğu.</text>
 <text x="1205" y="330" class="li">• Çatı terası da örter; önde 2 çelik</text>
 <text x="1215" y="350" class="li">dikme + kiriş (HEA/kutu profil).</text>
-<text x="1205" y="380" class="li">• Ön saçak 0,80 m, arka 0,60 m,</text>
-<text x="1215" y="400" class="li">yanlar 0,45 m.</text>
+<text x="1205" y="380" class="li">• Kırma çatı: 4 yöne 15° eğim, mahya</text>
+<text x="1215" y="400" class="li">2 m (ön-arka yönde), saçak her yönde 0,60 m.</text>
 <text x="1205" y="430" class="li">• Merdiven mevcut yerinde (sol-arka).</text>
-<text x="1205" y="460" class="li">• Mahya, döşemeden ≈ 3,98 m.</text>
+<text x="1205" y="460" class="li">• Mahya, döşemeden ≈ 3,71 m; alın duvarı yok.</text>
 </g>
 ${section}
 </svg></body></html>`;

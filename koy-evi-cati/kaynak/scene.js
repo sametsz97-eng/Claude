@@ -118,7 +118,6 @@ const WH = 2.2;          // new wall height
 const TOP = GF + WH;     // 5.2
 const TH = THREE.MathUtils.degToRad(15), TAN = Math.tan(TH);
 const SHEET0 = TOP + 0.17; // sheet height at |z|=6
-const RIDGE = SHEET0 + 6 * TAN;
 const house = new THREE.Group(); scene.add(house);
 const roofG = new THREE.Group(); scene.add(roofG);
 const upperG = new THREE.Group(); scene.add(upperG);
@@ -169,33 +168,57 @@ for (const x of [-1.65, 1.65]) boxB(x - 0.05, x + 0.05, GF + 0.5, TOP - 0.2, 5.8
 // concrete tie-beam (hatıl) on wall tops
 boxB(-5.0, 5.0, TOP - 0.02, TOP, -6.0, -5.8, mat.concrete, upperG); boxB(4.8, 5.0, TOP - 0.02, TOP, -6, 6, mat.concrete, upperG); boxB(-5.0, -4.8, TOP - 0.02, TOP, -6, 6, mat.concrete, upperG);
 
-// gable triangles
-function gable(xc) {
-  const s = new THREE.Shape(); s.moveTo(-6, 0); s.lineTo(6, 0); s.lineTo(0, 6 * TAN); s.closePath();
-  const g = new THREE.ExtrudeGeometry(s, { depth: T, bevelEnabled: false });
-  const m = new THREE.Mesh(g, mat.plaster); m.rotation.y = -Math.PI / 2; m.position.set(xc + T / 2, TOP, 0);
-  m.castShadow = m.receiveShadow = true; roofG.add(m);
+// ---------- HIP ROOF (kırma çatı, 4 yöne eğimli): steel profiles + trapezoidal sheet ----------
+const OV = 0.6, EX = 5 + OV, EZ = 6 + OV;           // eave outline
+const EAVE = SHEET0 - OV * TAN;                       // sheet height at eave
+const RIDGE = EAVE + EX * TAN, RZ = EZ - EX;          // ridge along z, x=0
+const ribTex = canvasTex(64, (g, s) => { g.fillStyle = '#fff'; g.fillRect(0, 0, s, s); g.fillStyle = '#000'; g.fillRect(0, 0, s * 0.35, s); g.fillStyle = '#777'; g.fillRect(s * 0.35, 0, s * 0.08, s); g.fillRect(s * 0.92, 0, s * 0.08, s); });
+ribTex.colorSpace = THREE.NoColorSpace;
+const roofTop = M(0x9b3a27, { roughness: 0.42, metalness: 0.35, bumpMap: ribTex, bumpScale: 2.5 });
+// faces: [corner points], u-axis direction along eave
+function face(pts, uAxis, m, off) {
+  const pos = [], uv = [];
+  const tri = pts.length === 3 ? [[0, 1, 2]] : [[0, 1, 2], [0, 2, 3]];
+  for (const t of tri) for (const i of t) { const p = pts[i]; pos.push(p[0], p[1] + off, p[2]); uv.push((uAxis === 'x' ? p[0] : p[2]) / 0.25, (uAxis === 'x' ? p[2] : p[0]) / 0.25); }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.computeVertexNormals();
+  const me = new THREE.Mesh(g, m); me.castShadow = true; me.receiveShadow = true; roofG.add(me); return me;
 }
-gable(4.9); gable(-4.9);
-
-// ---------- ROOF: steel profiles + trapezoidal sheet ----------
-function slope(sign, len) {
-  const g = new THREE.Group(); g.position.set(0, RIDGE, 0); g.rotation.x = sign * TH; roofG.add(g);
-  const z = v => v * sign;
-  const X0 = -5.45, X1 = 5.45;
-  boxB(X0, X1, -0.008, -0.003, z(0), z(len), mat.roofUnder, g); boxB(X0, X1, -0.003, 0, z(0), z(len), mat.roof, g);
-  for (let x = X0 + 0.12; x < X1; x += 0.25) boxB(x - 0.025, x + 0.025, 0, 0.032, z(0), z(len), mat.roof, g);
-  for (let p = 0.15; p < len; p += 0.9) boxB(X0 + 0.05, X1 - 0.05, -0.07, -0.008, z(p - 0.03), z(p + 0.03), mat.galv, g);       // aşık (purlins)
-  for (let x = -3.75; x <= 3.76; x += 1.25) boxB(x - 0.03, x + 0.03, -0.17, -0.07, z(0), z(len - 0.05), mat.steel, g);   // makas/rafters
-  boxB(X0 - 0.04, X0, -0.08, 0.06, z(0), z(len), mat.roofEdge, g); boxB(X1, X1 + 0.04, -0.08, 0.06, z(0), z(len), mat.roofEdge, g); // rüzgarlık
-  // gutter
-  const gu = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.075, X1 - X0, 16, 1, false, 0, Math.PI), mat.galv);
-  gu.rotation.z = Math.PI / 2; gu.rotation.x = 0; gu.position.set(0, -0.02, z(len + 0.05)); gu.castShadow = true; g.add(gu);
-  gu.material = mat.galv; gu.material.side = THREE.DoubleSide;
+const A = [-EX, EAVE, EZ], B = [EX, EAVE, EZ], C = [EX, EAVE, -EZ], Dd = [-EX, EAVE, -EZ], RF = [0, RIDGE, RZ], RB = [0, RIDGE, -RZ];
+const faces = [[[A, B, RF], 'x'], [[C, Dd, RB], 'x'], [[B, C, RB, RF], 'z'], [[Dd, A, RF, RB], 'z']];
+const under = M(0xc9ccce, { roughness: 0.5, metalness: 0.2, side: THREE.BackSide });
+for (const [p, ax] of faces) {
+  face(p, ax, roofTop, 0);
+  face(p, ax, under, -0.006);
 }
-slope(1, 6.8 / Math.cos(TH));
-slope(-1, 6.6 / Math.cos(TH));
-boxB(-5.5, 5.5, RIDGE - 0.02, RIDGE + 0.06, -0.2, 0.2, mat.roofEdge, roofG); // mahya
+// oriented bar between two points
+function bar(p, q, w, h, m) {
+  const a = new THREE.Vector3(...p), b = new THREE.Vector3(...q), len = a.distanceTo(b);
+  const me = new THREE.Mesh(new THREE.BoxGeometry(w, h, len), m); me.position.copy(a).add(b).multiplyScalar(0.5); me.lookAt(b);
+  me.castShadow = me.receiveShadow = true; roofG.add(me); return me;
+}
+// hip + ridge caps
+for (const [p, q] of [[A, RF], [B, RF], [C, RB], [Dd, RB], [RF, RB]]) bar([p[0], p[1] + 0.03, p[2]], [q[0], q[1] + 0.03, q[2]], 0.22, 0.05, mat.roofEdge);
+// structure under sheet: hip rafters, common rafters, purlins
+const dn = 0.17;
+for (const [p, q] of [[A, RF], [B, RF], [C, RB], [Dd, RB], [RF, RB]]) bar([p[0], p[1] - dn + 0.05, p[2]], [q[0], q[1] - dn + 0.05, q[2]], 0.06, 0.1, mat.steel);
+for (let x = -3.75; x <= 3.76; x += 1.25) for (const s of [1, -1]) {        // front/back faces
+  const d = EX - Math.abs(x); bar([x, EAVE - dn + 0.05, s * EZ], [x, EAVE + d * TAN - dn + 0.05, s * (EZ - d)], 0.06, 0.1, mat.steel);
+}
+for (let z = -RZ - 0.0; z <= RZ + 0.01; z += 1.0) for (const s of [1, -1]) bar([s * EX, EAVE - dn + 0.05, z], [0, RIDGE - dn + 0.05, z], 0.06, 0.1, mat.steel);
+for (let d = 0.25; d < EX - 0.2; d += 0.9) {
+  const y = EAVE + d * TAN - 0.04;
+  for (const s of [1, -1]) {
+    boxB(-EX + d, EX - d, y - 0.03, y + 0.03, s * (EZ - d) - 0.03, s * (EZ - d) + 0.03, mat.galv, roofG);   // front/back purlins
+    boxB(s * (EX - d) - 0.03, s * (EX - d) + 0.03, y - 0.03, y + 0.03, -EZ + d, EZ - d, mat.galv, roofG);  // side purlins
+  }
+}
+// close gap between wall top and sheet (frieze)
+boxB(-5, 5, TOP, SHEET0 - 0.01, -6, -5.8, mat.plaster, roofG); boxB(4.8, 5, TOP, SHEET0 - 0.01, -6, 6, mat.plaster, roofG); boxB(-5, -4.8, TOP, SHEET0 - 0.01, -6, 6, mat.plaster, roofG);
+boxB(-4.8, 4.8, TOP, SHEET0 - 0.01, 5.82, 5.98, mat.steel, roofG);
+// fascia + gutters
+const gut = (len, x, z, rotY) => { const g = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.075, len, 16, 1, false, 0, Math.PI), M(0xa7adb3, { roughness: 0.35, metalness: 0.8, side: THREE.DoubleSide })); g.rotation.set(0, rotY, Math.PI / 2); g.position.set(x, EAVE - 0.03, z); g.castShadow = true; roofG.add(g); };
+gut(2 * EX + 0.15, 0, EZ + 0.05, 0); gut(2 * EX + 0.15, 0, -EZ - 0.05, 0); gut(2 * EZ + 0.15, EX + 0.05, 0, Math.PI / 2); gut(2 * EZ + 0.15, -EX - 0.05, 0, Math.PI / 2);
+for (const s of [1, -1]) { boxB(-EX, EX, EAVE - 0.14, EAVE, s * EZ - 0.015, s * EZ + 0.015, mat.roofEdge, roofG); boxB(s * EX - 0.015, s * EX + 0.015, EAVE - 0.14, EAVE, -EZ, EZ, mat.roofEdge, roofG); }
 
 // ---------- interior partitions + furniture (for cut-away) ----------
 const iw = (axis, a0, a1, c, ops = []) => wall(axis, a0, a1, c, GF, WH, 0.1, ops.map(([a, b]) => ({ a, b, s: 0, e: 2.05, type: 'open' })), mat.plasterIn, interiorG);
@@ -340,9 +363,9 @@ simpleHouse(110, 10, 9, 8, 3.0, -0.3, 0xf0e8da, 0x9b4a33);
 
 // ---------- views ----------
 const views = {
-  front:   { cam: [11, 4.2, 27], look: [0, 3.6, 0], sun: [-0.55, 0.62, 0.75], fov: 42, t: 'ÖN CEPHE — Yol tarafı (Güney)', s: 'Kapalı teras, cam sürgü kapılar, profil+trapez sac çatı (%27 / 15°)' },
+  front:   { cam: [11, 4.2, 27], look: [0, 3.6, 0], sun: [-0.55, 0.62, 0.75], fov: 42, t: 'ÖN CEPHE — Yol tarafı (Güney)', s: 'Kapalı teras, cam sürgü kapılar, 4 yöne eğimli kırma çatı, profil+trapez sac (15°)' },
   back:    { cam: [-10, 5.5, -27], look: [0, 3.4, 0], sun: [0.45, 0.6, -0.7], fov: 42, t: 'ARKA CEPHE — Bahçe tarafı (Kuzey)', s: 'Arkada deniz ve dağ manzarası' },
-  right:   { cam: [27, 4.5, 6], look: [0, 3.4, 0.5], sun: [0.75, 0.55, 0.45], fov: 42, t: 'SAĞ YAN CEPHE (Doğu)', s: 'Üçgen alın duvarı, 2,20 m duvar + çatı eğimi' },
+  right:   { cam: [27, 4.5, 6], look: [0, 3.4, 0.5], sun: [0.75, 0.55, 0.45], fov: 42, t: 'SAĞ YAN CEPHE (Doğu)', s: '2,20 m duvar, 4 yöne eğimli kırma çatı' },
   left:    { cam: [-27, 4.5, 4], look: [0, 3.4, 0.5], sun: [-0.75, 0.55, 0.4], fov: 42, t: 'SOL YAN CEPHE (Batı)', s: 'Mevcut 1 m genişliğindeki giriş bölümü görünüyor' },
   aerial:  { cam: [-16, 21, -30], look: [3, -2, 22], sun: [-0.3, 0.65, 0.7], fov: 50, t: 'KUŞ BAKIŞI — Deniz yönüne', s: 'Ev arkadan; teras denize ve karşı dağlara bakıyor' },
   terrace: { cam: [-1.2, GF + 1.5, 3.3], look: [3, GF + 1.75, 60], sun: [-0.5, 0.55, 0.7], fov: 62, t: 'TERASTAN MANZARA', s: 'Deniz ve dağ manzarası — oturunca da görünsün diye alçak duvar + korkuluk' },
