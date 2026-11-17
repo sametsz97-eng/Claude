@@ -186,7 +186,7 @@ def make_s2_bg():
     d.rectangle((70, 250, 84, 1000), fill=(80, 70, 74))
     # window with the pink city
     wx0, wy0, wx1, wy1 = 250, 330, 650, 820
-    img.paste(city(wx1 - wx0, wy1 - wy0, 3), (wx0, wy0))
+    img.paste(istanbul(wx1 - wx0, wy1 - wy0, px=4, horizon=0.70, mosques=((0.80, 0.85), (0.12, 0.5)), galata=0.33, bridge=0.60, maiden=0.55), (wx0, wy0))
     fr = (210, 200, 206)
     d.rectangle((wx0 - 14, wy0 - 14, wx1 + 14, wy0), fill=fr)
     d.rectangle((wx0 - 14, wy1, wx1 + 14, wy1 + 20), fill=fr)
@@ -729,7 +729,7 @@ def make_s6_bg():
     w_ = wall * (0.7 + 0.3 * noise(W // 4, H // 4, 3, 31))[..., None] * (0.8 + 0.3 * (xx / (W // 4)))[..., None]
     img.paste(pixup(to_img(w_), (W, H)))
     x0, y0, x1, y1 = 190, 120, 760, 1240
-    img.paste(city(x1 - x0, y1 - y0, 11, px=5), (x0, y0))
+    img.paste(istanbul(x1 - x0, y1 - y0, px=5, horizon=0.66, mosques=((0.60, 1.0), (0.95, 0.55)), galata=0.28, bridge=0.85, maiden=0.42, seed=11), (x0, y0))
     d = ImageDraw.Draw(img)
     fr = (236, 228, 234)
     d.rectangle((x0 - 24, y0 - 24, x1, y0), fill=fr)

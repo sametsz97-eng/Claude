@@ -231,3 +231,107 @@ def post(img, fi, grade=(1.0, 1.0, 1.0), vign=0.45, gain=1.0):
     q = 48.0
     arr = np.floor(arr * q + rng.random((H, W, 1)).astype(np.float32)) / q
     return Image.fromarray((np.clip(arr, 0, 1) * 255).astype(np.uint8))
+
+
+# ------------------------------------------------------------------ Istanbul skyline outside the window
+def istanbul(w, h, px=4, horizon=0.66, mosques=((0.70, 1.0),), galata=0.18, bridge=0.92, maiden=0.40, seed=3):
+    """pixel-art Istanbul at sunset: Bosphorus, mosques with domes + minarets, Galata Tower,
+    Bosphorus Bridge, Maiden's Tower. Positions are fractions of the width."""
+    lw, lh = w // px, h // px
+    hz = int(lh * horizon)
+    yy = np.mgrid[0:lh, 0:lw][0].astype(np.float32) / max(1, hz)
+    top = np.array([128, 96, 178], np.float32)
+    mid = np.array([232, 150, 206], np.float32)
+    low = np.array([255, 196, 170], np.float32)
+    v = np.clip(yy, 0, 1)[..., None]
+    sky = np.where(v < 0.6, top + (mid - top) * (v / 0.6), mid + (low - mid) * ((v - 0.6) / 0.4))
+    img = to_img(sky)
+    d = ImageDraw.Draw(img)
+    rng = np.random.default_rng(seed)
+    # sun
+    sx, sy, sr = lw * 0.58, hz - lh * 0.06, max(3, lw * 0.06)
+    d.ellipse((sx - sr, sy - sr, sx + sr, sy + sr), fill=(255, 226, 190))
+    U = max(2.0, lw / 24.0)                       # skyline unit
+    far = (150, 96, 156)
+    near = (52, 28, 72)
+    lit = (255, 206, 150)
+    # far shore (Asian side): low hills with tiny houses
+    pts = [(0, hz)]
+    for x in range(0, lw + 4, 4):
+        pts.append((x, hz - 2 - U * (0.9 + 0.6 * math.sin(x * 0.11) + 0.4 * math.sin(x * 0.37))))
+    pts.append((lw, hz))
+    d.polygon(pts, fill=far)
+    # Bosphorus Bridge (far, right)
+    if bridge is not None:
+        bx = lw * bridge
+        span = lw * 0.5
+        t1, t2 = bx - span / 2, bx + span / 2
+        deck = hz - U * 1.6
+        th = U * 4.5
+        for tx in (t1, t2):
+            d.rectangle((tx - 0.6, deck - th, tx + 0.6, deck + U), fill=far)
+        d.line([(t1 - span * 0.3, deck), (t2 + span * 0.3, deck)], fill=far, width=1)
+        cab = [(t1 + (t2 - t1) * k / 20, deck - th + th * 0.95 * (1 - (2 * k / 20 - 1) ** 2)) for k in range(21)]
+        d.line(cab, fill=(150, 98, 152), width=1)
+    # water
+    for y in range(hz, lh):
+        k = (y - hz) / max(1, lh - hz)
+        d.line([(0, y), (lw, y)], fill=(int(150 - 60 * k), int(100 - 40 * k), int(170 - 40 * k)))
+    for _ in range(int(lw * 0.8)):
+        y = rng.integers(hz + 1, lh)
+        x = rng.uniform(0, lw)
+        L = rng.uniform(2, 6)
+        near_sun = abs(x - sx) < lw * 0.12
+        d.line([(x, y), (x + L, y)], fill=(255, 210, 190) if near_sun else (190, 140, 200))
+    # Maiden's Tower on a rock in the water
+    if maiden is not None:
+        mx, my = lw * maiden, hz + (lh - hz) * 0.35
+        d.ellipse((mx - U * 1.6, my - U * 0.3, mx + U * 1.6, my + U * 0.6), fill=near)
+        d.rectangle((mx - U * 0.9, my - U * 1.2, mx + U * 0.9, my), fill=near)
+        d.rectangle((mx - U * 0.35, my - U * 2.8, mx + U * 0.35, my - U * 1.2), fill=near)
+        d.polygon([(mx - U * 0.5, my - U * 2.8), (mx + U * 0.5, my - U * 2.8), (mx, my - U * 3.8)], fill=near)
+    # historic peninsula: continuous low city band on the near shore
+    base = hz
+    band = [(0, base)]
+    for x in range(0, lw + 3, 3):
+        band.append((x, base - U * (1.2 + 0.5 * rng.random())))
+    band.append((lw, base))
+    d.polygon(band, fill=near)
+
+    def mosque(cx, scale):
+        R = U * 2.6 * scale
+        by = base - U * 1.0
+        d.rectangle((cx - R * 1.9, by - R * 0.55, cx + R * 1.9, base), fill=near)
+        for k in (-1, 1):                                            # half domes / small domes
+            d.pieslice((cx + k * R * 1.05 - R * 0.7, by - R * 1.3, cx + k * R * 1.05 + R * 0.7, by + R * 0.1), 180, 360, fill=near)
+            d.pieslice((cx + k * R * 1.7 - R * 0.35, by - R * 0.9, cx + k * R * 1.7 + R * 0.35, by - R * 0.2), 180, 360, fill=near)
+        d.rectangle((cx - R * 0.95, by - R * 1.05, cx + R * 0.95, by - R * 0.5), fill=near)   # drum
+        d.pieslice((cx - R, by - R * 2.0, cx + R, by - R * 0.1), 180, 360, fill=near)        # main dome
+        d.line([(cx, by - R * 1.05), (cx, by - R * 1.35)], fill=near, width=1)              # finial
+        for k, hgt in ((-2.6, 3.4), (-2.2, 3.0), (2.2, 3.0), (2.6, 3.4)):                   # minarets
+            mxx = cx + k * R * 0.95
+            top_y = by - R * hgt
+            wdt = max(0.6, R * 0.09)
+            d.rectangle((mxx - wdt, top_y, mxx + wdt, base), fill=near)
+            d.line([(mxx - wdt - 1, top_y + R * 0.9), (mxx + wdt + 1, top_y + R * 0.9)], fill=near)   # balcony
+            d.line([(mxx - wdt - 1, top_y + R * 1.6), (mxx + wdt + 1, top_y + R * 1.6)], fill=near)
+            d.polygon([(mxx - wdt, top_y), (mxx + wdt, top_y), (mxx, top_y - R * 0.7)], fill=near)
+        for wx in np.arange(cx - R * 1.7, cx + R * 1.7, 2.0):                                # warm lit windows
+            if rng.random() < 0.6:
+                d.point((wx, by - R * 0.25), fill=lit)
+
+    for mx, sc in mosques:
+        mosque(lw * mx, sc)
+    # Galata Tower
+    if galata is not None:
+        gx = lw * galata
+        gw, gh = U * 0.8, U * 6.5
+        d.rectangle((gx - gw, base - gh, gx + gw, base), fill=near)
+        d.rectangle((gx - gw - 0.6, base - gh - U * 0.3, gx + gw + 0.6, base - gh + U * 0.4), fill=near)
+        d.polygon([(gx - gw - 0.6, base - gh - U * 0.3), (gx + gw + 0.6, base - gh - U * 0.3), (gx, base - gh - U * 2.6)], fill=near)
+        for k in range(3):
+            d.point((gx - gw * 0.5 + k * gw * 0.5, base - gh + U * 1.0), fill=lit)
+    # scattered lit windows along the city band
+    for _ in range(int(lw * 0.5)):
+        d.point((rng.uniform(0, lw), base - rng.uniform(0.3, 1.1) * U), fill=lit)
+    return pixup(img, (w, h))
