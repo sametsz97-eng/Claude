@@ -18,6 +18,7 @@ function beatPulse(t, k = 7) { let b = -10; for (const x of BEATS) { if (x <= t)
 function beatIndex(t) { let i = 0; for (const x of BEATS) { if (x <= t) i++; else break; } return i; }
 
 function ps2(m) {
+  return m; // vertex snapping disabled: it made the road and buildings wobble
   m.onBeforeCompile = (sh) => {
     sh.vertexShader = sh.vertexShader.replace('#include <project_vertex>',
       '#include <project_vertex>\n{ vec4 p = gl_Position; vec2 g = vec2(200.0,112.0); p.xy = floor(p.xy / p.w * g + 0.5) / g * p.w; gl_Position = p; }');
@@ -36,7 +37,7 @@ function ctex(w, h, draw, nearest = true) {
   const c = document.createElement('canvas'); c.width = w; c.height = h;
   draw(c.getContext('2d'), w, h);
   const t = new THREE.CanvasTexture(c);
-  if (nearest) { t.magFilter = THREE.NearestFilter; t.minFilter = THREE.NearestFilter; t.generateMipmaps = false; }
+  if (nearest) { t.magFilter = THREE.NearestFilter; t.minFilter = THREE.LinearMipmapLinearFilter; t.generateMipmaps = true; t.anisotropy = 8; }
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
   return t;
 }
