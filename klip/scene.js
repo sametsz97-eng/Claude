@@ -42,6 +42,7 @@ function ctex(w, h, draw, nearest = true) {
 }
 function mesh(geo, mat, x = 0, y = 0, z = 0, parent) { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); if (parent) parent.add(m); return m; }
 const box = (w, h, d) => new THREE.BoxGeometry(w, h, d);
+const cyl = (rt, rb, h, n = 7) => new THREE.CylinderGeometry(rt, rb, h, n);
 
 // ---------- renderer ----------
 const canvas = document.getElementById('c');
@@ -51,7 +52,7 @@ renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
 const rt = new THREE.WebGLRenderTarget(W, H, { generateMipmaps: true, minFilter: THREE.LinearMipmapLinearFilter, magFilter: THREE.LinearFilter });
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(50, W / H, 0.05, 210);
-scene.fog = new THREE.Fog(0x39424f, 8, 90);
+scene.fog = new THREE.Fog(0x4a525c, 3, 55);
 
 // sky
 const skyU = { top: { value: col('#0b0f1a') }, hor: { value: col('#39424f') }, bot: { value: col('#1a1e26') } };
@@ -164,23 +165,23 @@ function makeHuman(kind) {
   const girl = kind === 'girl';
   const root = new THREE.Group();
   const body = new THREE.Group(); root.add(body);
-  const s = girl ? 0.92 : 1.0; body.scale.setScalar(s);
+  const s = girl ? 0.9 : 1.0; const lw = girl ? 0.82 : 1.0; body.scale.setScalar(s);
   const C = girl
-    ? { top: '#e7dccb', sleeve: '#e7dccb', pants: '#1e1d22', shoe: '#efefef', skin: '#eec4a6', hair: '#2e2119' }
+    ? { top: '#ddd3c4', sleeve: '#ddd3c4', pants: '#1e1d22', shoe: '#e4e2dc', skin: '#e8bfa2', hair: '#2a1d16' }
     : { top: '#3f4b2b', sleeve: '#3f4b2b', pants: '#202329', shoe: '#18181a', skin: '#d8a284', hair: '#14110e' };
   const hips = new THREE.Group(); hips.position.y = 0.93; body.add(hips);
   const legs = [];
   for (const sd of [-1, 1]) {
     const th = new THREE.Group(); th.position.set(sd * 0.1, 0, 0); hips.add(th);
-    mesh(box(0.15, 0.46, 0.16), lam(C.pants), 0, -0.23, 0, th);
+    mesh(cyl(0.085 * lw, 0.064 * lw, 0.46), lam(C.pants), 0, -0.23, 0, th);
     const kn = new THREE.Group(); kn.position.y = -0.46; th.add(kn);
-    mesh(box(0.12, 0.43, 0.13), lam(C.pants), 0, -0.215, 0, kn);
-    mesh(box(0.12, 0.07, 0.25), lam(C.shoe), 0, -0.45, 0.05, kn);
+    mesh(cyl(0.062 * lw, 0.046 * lw, 0.43), lam(C.pants), 0, -0.215, 0, kn); mesh(new THREE.SphereGeometry(0.064 * lw, 6, 4), lam(C.pants), 0, 0, 0, kn);
+    mesh(box(0.11 * lw, 0.07, 0.25), lam(C.shoe), 0, -0.45, 0.05, kn);
     legs.push({ th, kn });
   }
   const chest = new THREE.Group(); hips.add(chest);
-  const tw = girl ? 0.33 : 0.42;
-  mesh(box(tw, 0.6, girl ? 0.19 : 0.23), lam(C.top), 0, 0.3, 0, chest);
+  const tw = girl ? 0.31 : 0.42;
+  { const tor = mesh(new THREE.CylinderGeometry(tw / 2, tw / 2 * (girl ? 0.72 : 0.86), 0.6, 8), lam(C.top), 0, 0.3, 0, chest); tor.scale.z = (girl ? 0.19 : 0.23) / tw; const sh = mesh(new THREE.SphereGeometry(tw / 2, 8, 4, 0, Math.PI * 2, 0, Math.PI / 2), lam(C.top), 0, 0.58, 0, chest); sh.scale.set(1, 0.32, (girl ? 0.19 : 0.23) / tw); }
   mesh(box(tw * 0.85, 0.16, 0.2), lam(C.pants), 0, 0.02, 0, chest);
   if (girl) {
     const coat = mesh(new THREE.CylinderGeometry(0.17, 0.25, 0.6, 8, 1, true), lam(C.top, { side: THREE.DoubleSide }), 0, -0.22, 0, chest);
@@ -202,7 +203,7 @@ function makeHuman(kind) {
   for (const sd of [-1, 1]) { const e = mesh(new THREE.SphereGeometry(0.028, 6, 4), lam(C.skin), sd * hr * 0.88, -0.005, -0.01, head); e.scale.set(0.45, 1.1, 0.8); }
   if (girl) {
     const cap = mesh(new THREE.SphereGeometry(hr * 1.09, 14, 8, 0, Math.PI * 2, 0, Math.PI * 0.5), lam(C.hair), 0, 0.012, -0.008, head); cap.scale.set(0.92, 1.13, 1.02);
-    mesh(box(0.2, 0.48, 0.07), lam(C.hair), 0, -0.2, -0.07, head); mesh(new THREE.SphereGeometry(0.1, 8, 6), lam(C.hair), 0, -0.02, -0.05, head).scale.set(1.0, 1.1, 0.8);
+    { const hb = mesh(new THREE.CylinderGeometry(0.118, 0.14, 0.5, 10, 1, true, Math.PI * 0.5, Math.PI), lam(C.hair, { side: THREE.DoubleSide }), 0, -0.2, -0.005, head); hb.scale.z = 0.9; } mesh(new THREE.SphereGeometry(0.1, 8, 6), lam(C.hair), 0, -0.02, -0.05, head).scale.set(1.0, 1.1, 0.8);
     for (const sd of [-1, 1]) { const st = mesh(box(0.05, 0.36, 0.07), lam(C.hair), sd * 0.1, -0.15, 0.02, head); st.rotation.z = sd * 0.06; }
   } else {
     const cap = mesh(new THREE.SphereGeometry(hr * 1.05, 14, 7, 0, Math.PI * 2, 0, Math.PI * 0.36), lam(C.hair), 0, 0.01, -0.01, head); cap.scale.set(0.9, 1.13, 1.0);
@@ -214,10 +215,10 @@ function makeHuman(kind) {
   const arms = [];
   for (const sd of [-1, 1]) {
     const sh = new THREE.Group(); sh.position.set(sd * (tw / 2 + 0.05), 0.54, 0); chest.add(sh);
-    mesh(box(0.1, 0.32, 0.11), lam(C.sleeve), 0, -0.15, 0, sh);
+    mesh(cyl(0.056 * lw, 0.046 * lw, 0.32, 6), lam(C.sleeve), 0, -0.15, 0, sh); mesh(new THREE.SphereGeometry(0.058 * lw, 6, 4), lam(C.sleeve), 0, 0, 0, sh);
     const el = new THREE.Group(); el.position.y = -0.3; sh.add(el);
-    mesh(box(0.09, 0.28, 0.1), lam(C.sleeve), 0, -0.13, 0, el);
-    mesh(box(0.07, 0.09, 0.09), lam(C.skin), 0, -0.3, 0, el);
+    mesh(cyl(0.046 * lw, 0.036 * lw, 0.28, 6), lam(C.sleeve), 0, -0.13, 0, el);
+    mesh(box(0.06 * lw, 0.09, 0.08), lam(C.skin), 0, -0.3, 0, el);
     arms.push({ sh, el });
   }
   root.userData = { kind, body, hips, chest, head, skull, fN, fS, legs, arms, s };
@@ -377,7 +378,7 @@ function makeLamp(x, z, sd, parent = world) {
 const LANE = 1.9;
 const pathT = [], pathZ = [];
 {
-  const vel = (t) => t < 4 ? 9 * smooth(0, 4, t) : t < 16.4 ? 9 : t < 18 ? lerp(9, 17, smooth(16.4, 18, t)) : t < 20.6 ? 17 : t < 23 ? 17 * (1 - smooth(20.6, 23, t)) : 0;
+  const vel = (t) => t < 2.4 ? 0 : t < 5.4 ? 9 * smooth(2.4, 5.4, t) : t < 16.4 ? 9 : t < 18 ? lerp(9, 17, smooth(16.4, 18, t)) : t < 20.6 ? 17 : t < 23 ? 17 * (1 - smooth(20.6, 23, t)) : 0;
   let z = 2, dt = 1 / 240;
   for (let t = 0; t <= 30; t += dt) { pathT.push(t); pathZ.push(z); z -= vel(t) * dt; }
 }
@@ -389,8 +390,12 @@ const heroLamp = makeLamp(-5.4, ZS - 4.6, -1);
 // no-parking sign
 { const g = new THREE.Group(); g.position.set(4.9, 0.15, ZS + 2.6); sinkGroup.add(g); mesh(new THREE.CylinderGeometry(0.03, 0.03, 2.2, 5), lam('#7a7d82'), 0, 1.1, 0, g); const st = ctex(32, 32, (gg) => { gg.fillStyle = '#1a4fd0'; gg.beginPath(); gg.arc(16, 16, 15, 0, 7); gg.fill(); gg.strokeStyle = '#e02020'; gg.lineWidth = 4; gg.beginPath(); gg.arc(16, 16, 13, 0, 7); gg.stroke(); gg.beginPath(); gg.moveTo(6, 6); gg.lineTo(26, 26); gg.stroke(); gg.beginPath(); gg.moveTo(26, 6); gg.lineTo(6, 26); gg.stroke(); }); const sg = mesh(new THREE.CircleGeometry(0.3, 10), new THREE.MeshLambertMaterial({ map: st, side: THREE.DoubleSide }), 0, 2.0, 0, g); sg.rotation.y = Math.PI / 2 + 0.6; }
 
+// low ground mist
+const mistMat = new THREE.SpriteMaterial({ map: cloudTex, color: 0x9aa2ac, transparent: true, depthWrite: false, opacity: 0.22 });
+const mist = new THREE.Group(); sinkGroup.add(mist);
+{ const r2 = rng(88); for (let i = 0; i < 230; i++) { const sp = new THREE.Sprite(mistMat); sp.position.set((r2() - 0.5) * 22, 0.4 + r2() * 1.4, 14 - r2() * 260); const s = 5 + r2() * 7; sp.scale.set(s, s * 0.35, 1); mist.add(sp); } }
 // clouds
-const cloudMats = ['#ffffff', '#ffd3e6', '#d8c8ff', '#ffe2c8'].map((c) => new THREE.SpriteMaterial({ map: cloudTex, color: col(c), transparent: true, depthWrite: false, opacity: 0 }));
+const cloudMats = ['#e8e6ea', '#e2d2da', '#cfcbdc', '#e6dccf'].map((c) => new THREE.SpriteMaterial({ map: cloudTex, color: col(c), transparent: true, depthWrite: false, opacity: 0 }));
 const clouds = new THREE.Group(); scene.add(clouds);
 {
   const r2 = rng(77);
@@ -439,8 +444,9 @@ function updateRain(cam, amt, len) {
 function textMesh(lines, o) {
   const c = document.createElement('canvas'); c.width = o.cw || 1024; c.height = o.ch || 256;
   const g = c.getContext('2d'); g.textAlign = 'center'; g.textBaseline = 'middle';
+  if (o.clipTop) { g.beginPath(); g.rect(0, 0, c.width, c.height * o.clipTop); g.clip(); }
   lines.forEach((ln, i) => {
-    g.font = ln.font; const y = ln.y * c.height;
+    g.font = ln.font; if (ln.stroke) { g.lineJoin = 'round'; g.lineWidth = ln.stroke; g.strokeStyle = ln.strokeColor || '#000'; g.strokeText(ln.text, c.width / 2, ln.y * c.height); } const y = ln.y * c.height;
     if (ln.glow) { g.shadowColor = ln.glow; g.shadowBlur = ln.blur || 24; g.fillStyle = ln.color; g.fillText(ln.text, c.width / 2, y); g.fillText(ln.text, c.width / 2, y); }
     g.shadowBlur = 0; g.fillStyle = ln.color; g.fillText(ln.text, c.width / 2, y);
   });
@@ -469,7 +475,7 @@ const post = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMater
     vec2 d = uv-0.5; c *= 1.0 - vig*dot(d,d)*1.6;
     c += (hash(gl_FragCoord.xy)-0.5)*grain;
     c = mix(c, flashCol, flash);
-    c *= fade;
+    c = c*0.93 + vec3(0.035,0.033,0.03); c *= fade;
     c *= 0.95 + 0.05*sin(gl_FragCoord.y*3.14159);
     c += (bayer(gl_FragCoord.xy)-0.5)/28.0; c = floor(clamp(c,0.0,1.0)*31.0+0.5)/31.0;
     gl_FragColor = vec4(c,1.0);
@@ -483,12 +489,14 @@ const samu = makeHuman('samu');
 const girl = makeHuman('girl');
 const umb = makeUmbrella();
 const car = makeCar();
-const titleBack = textMesh([{ text: 'cennetten', font: 'italic 600 190px Corm', color: '#fff4fb', glow: 'rgba(255,170,215,0.9)', blur: 30, y: 0.52 }], { w: 9.0, cw: 1024, ch: 300 });
-const titleFront = textMesh([{ text: 'bi parça', font: 'italic 600 190px Corm', color: '#fff4fb', glow: 'rgba(170,200,255,0.9)', blur: 30, y: 0.5 }], { w: 3.6, cw: 1024, ch: 300 });
+const TITLE_L = [{ text: 'cennetten bi parça', font: 'italic 600 170px Corm', color: '#fffaf6', stroke: 6, strokeColor: 'rgba(40,20,30,0.55)', glow: 'rgba(255,190,200,0.95)', blur: 34, y: 0.56 }];
+const TITLE_O = { w: 6.2, cw: 1400, ch: 280 };
+let titleBack = textMesh(TITLE_L, TITLE_O);
+let titleFront = textMesh(TITLE_L, { ...TITLE_O, clipTop: 0.56 });
 scene.add(titleBack, titleFront);
 
-function overlay(id, lines, w, x, y) {
-  if (!ovs[id]) { const m = textMesh(lines, { w, cw: 1024, ch: 256 }); ov.add(m); ovs[id] = m; }
+function overlay(id, lines, w, x, y, cw = 1024) {
+  if (!ovs[id]) { const m = textMesh(lines, { w, cw, ch: 256 }); ov.add(m); ovs[id] = m; }
   const m = ovs[id]; m.position.set(x, y, 0); m.visible = true; return m;
 }
 
@@ -505,8 +513,8 @@ function unseat(h) { scene.add(h); }
 function setDream(d) { DREAM = d; }
 let DREAM = 0, SINK = 0;
 
-const N = { top: col('#0b0f1a'), hor: col('#3a4452'), bot: col('#14171c'), fog: col('#3a4452') };
-const D = { top: col('#2e1f5c'), hor: col('#b77aa8'), bot: col('#d9a3c4'), fog: col('#a8739f') };
+const N = { top: col('#141820'), hor: col('#4a525c'), bot: col('#1c1f24'), fog: col('#4a525c') };
+const D = { top: col('#2c2b44'), hor: col('#9c8c98'), bot: col('#b9a6ae'), fog: col('#8f8290') };
 
 function reset() {
   DREAM = 0; SINK = 0;
@@ -515,7 +523,7 @@ function reset() {
   parkCar(PARK.x, PARK.z, PARK.yaw, PARK.roll);
   titleBack.visible = titleFront.visible = false;
   for (const k in ovs) ovs[k].visible = false;
-  Object.assign(FX, { rain: 1, rainSpeed: 1, rainLen: 0.55, flash: 0, ab: 0.0008, bloom: 0.7, sat: 0.9, tint: [0.92, 0.97, 1.08], vig: 0.9, fade: 1, flashCol: [1, 1, 1], spark: 0, sparkC: V(0, 0, 0), sparkR: 4, hazard: false, smoke: 0, heads: true, beams: 1, wiper: false, hero: 1, fill: 0, drops: 1, dropsOff: 0, lampPulse: 0 });
+  Object.assign(FX, { rain: 1, rainSpeed: 1, rainLen: 0.55, flash: 0, ab: 0.0008, bloom: 0.7, sat: 0.9, tint: [0.97, 0.98, 1.02], vig: 0.9, fade: 1, flashCol: [1, 1, 1], spark: 0, sparkC: V(0, 0, 0), sparkR: 4, hazard: false, smoke: 0, heads: true, beams: 1, wiper: false, hero: 1, fill: 0, drops: 1, dropsOff: 0, lampPulse: 0 });
 }
 const FX = {};
 
@@ -525,16 +533,16 @@ const shot = (a, b, fn) => shots.push({ a, b, fn });
 
 function driving(t) { car.position.set(LANE, 0, carZ(t)); car.rotation.set(0, 0, 0); }
 
-// A — intro, title over the road
+// A — intro: title locked to the car, the car pulls away and the words stay in the fog
 shot(0, 7.6, (t, lt) => {
-  driving(t); seat(samu, -1); pose(samu, { sit: true, armR: [-1.1, 0.1, -0.5], armL: [-1.1, -0.1, -0.5] });
-  const p = V(LANE - 0.2, 1.25 + lt * 0.03, 9.5 - lt * 0.35);
-  cam(p, V(LANE, 1.05, -30), 46);
+  driving(t); seat(samu, -1); pose(samu, { sit: true, armR: [-1.1, 0.1, -0.5], armL: [-1.1, -0.1, -0.5], yaw: -0.15 });
+  const sw = shake(t, 0.006);
+  cam(V(LANE - 0.1, 1.08 + lt * 0.012, 8.6 - lt * 0.1).add(sw), V(LANE - 0.05, 1.0, -20), 44);
   titleBack.visible = titleFront.visible = true;
-  titleBack.position.set(LANE, 2.15, -2.4); titleFront.position.set(LANE + 0.35, 0.82, 5.0);
-  const o = smooth(0.4, 1.6, lt) * (1 - smooth(6.4, 7.5, lt));
+  titleBack.position.set(LANE, 1.0, 2.6); titleFront.position.copy(titleBack.position);
+  const o = smooth(0.3, 1.5, lt) * (1 - smooth(6.6, 7.5, lt));
   titleBack.material.opacity = o; titleFront.material.opacity = o;
-  FX.fade = smooth(0, 1.2, lt); FX.wiper = true;
+  FX.fade = smooth(0, 1.0, lt); FX.wiper = true; FX.vig = 1.1;
 });
 // B — interior profile (like the car photo)
 shot(7.6, 12.5, (t, lt) => {
@@ -684,16 +692,14 @@ shot(MSTART, MEND, (t, lt) => {
   umb.visible = true; umb.position.set(MID.x, 1.12, MID.z); umb.rotation.set(0, 0, 0);
   const pulse = beatPulse(t, 9);
   const dr = Math.sin(lt * 0.5) * 0.04;
-  if (seg === 0) { pose(samu, { smile: true, yaw: 0.1 }); const hp = headPos(samu); cam(rel(samu, V(-0.55, 1.68, 0.05)), hp, 26 + dr * 20); }
+  if (seg === 0) { pose(samu, { smile: true, yaw: 0.1 }); const hp = headPos(samu); cam(rel(samu, V(-0.45, 1.7, 0.5)), hp, 28 + dr * 20); }
   else if (seg === 1) { const hp = headPos(girl); cam(rel(girl, V(-0.6, 1.9, -0.9)), hp.clone().add(V(0, 0.1, 0)), 38); }
   else if (seg === 2) { cam(rel(car, V(-3.2, 0.7, 4.5)), rel(car, V(0, 0.7, 0)), 40); }
   else if (seg === 3) { pose(samu, { smile: true, armR: [-0.5, -0.3, -0.4] }); pose(girl, { armR: [-0.9, 0.5, -1.0], armL: [-0.5, 0.3, -0.4], smile: true }); cam(V(MID.x, 1.0, MID.z).add(V(-dirSG.z * 1.1, 0, dirSG.x * 1.1)), V(MID.x, 0.95, MID.z), 40); }
   else if (seg === 4) { const hp = headPos(samu); cam(rel(samu, V(-0.45, 1.75, 0.55)), hp, 30); }
   else { const hp = headPos(girl); cam(rel(girl, V(0.35, 1.58, 0.6)), hp, 30); }
-  FX.flash = pulse * 0.22; FX.flashCol = [1, 0.85, 0.95]; FX.ab = 0.001 + pulse * 0.006; FX.rainSpeed = 0.1; FX.rain = 0.5; FX.spark = 0.8; FX.sparkC = V(MID.x, 1.6, MID.z); FX.sparkR = 4;
+  FX.flash = pulse * 0.22; FX.flashCol = [1, 0.93, 0.9]; FX.ab = 0.001 + pulse * 0.006; FX.rainSpeed = 0.1; FX.rain = 0.5; FX.spark = 0.8; FX.sparkC = V(MID.x, 1.6, MID.z); FX.sparkR = 4;
   FX.fill = 0.7; fillLight.position.set(MID.x, 2.4, MID.z);
-  const showTxt = (t > 56.6 && t < 60.4) || (t > 64.4 && t < 68.6);
-  if (showTxt) { const m = overlay('ona', [{ text: 'ona galiba', font: '120px VT', color: '#fff6fb', glow: 'rgba(255,110,190,1)', blur: 18, y: 0.5 }], 360, 0, -118); m.material.opacity = (0.65 + 0.35 * pulse) * (Math.floor(t * 15) % 9 === 0 ? 0.3 : 1); }
   if (t > 68.0) FX.flash = smooth(68.0, 68.8, t) * 0.9;
 });
 
@@ -756,7 +762,7 @@ shot(98.0, 110.0, (t, lt) => {
   else if (seg === 1) { const a = lt * 0.7; cam(V(C.x + Math.sin(a) * 2.2, 0.35, C.z + Math.cos(a) * 2.2), V(C.x, 1.6, C.z), 60, 0.15 * Math.sin(lt)); }
   else { const a = lt * 0.6; cam(V(C.x + Math.sin(a) * 2.2, 4.2 - Math.sin(lt) * 0.4, C.z + Math.cos(a) * 2.2), V(C.x, 0.6, C.z), 58); }
   FX.rain = 0.7; FX.rainSpeed = -0.6; FX.rainLen = 0.3; FX.spark = 1; FX.sparkC = V(C.x, 1.5, C.z); FX.sparkR = 6;
-  FX.flash = pulse * 0.15; FX.flashCol = [1, 0.8, 0.95]; FX.ab = 0.0015 + pulse * 0.004; FX.lampPulse = pulse; FX.fill = 0.8 + pulse; fillLight.position.set(C.x, 2.8, C.z);
+  FX.flash = pulse * 0.15; FX.flashCol = [1, 0.92, 0.88]; FX.ab = 0.0015 + pulse * 0.004; FX.lampPulse = pulse; FX.fill = 0.8 + pulse; fillLight.position.set(C.x, 2.8, C.z);
 });
 // T — drop to silence
 shot(110.0, 114.0, (t, lt) => {
@@ -789,7 +795,7 @@ shot(114.0, 128.0, (t, lt) => {
     else { const k = smooth(0, 3.7, (lt % 3.715)); cam(rel(car, V(0, 2.4 + k * 6, -1.0 + k * 1)), rel(car, V(0, 0.8, -1.15)), 46, 0.3 * k); }
     FX.rain = 0.4; FX.rainSpeed = -0.5;
   }
-  FX.flash = Math.max(pulse * 0.16, (1 - smooth(114.0, 114.8, t))); FX.flashCol = [1, 0.85, 0.95]; FX.ab = 0.0015 + pulse * 0.004; FX.lampPulse = pulse; FX.spark = 0.6; FX.sparkC = camera.position.clone(); FX.sparkR = 8;
+  FX.flash = Math.max(pulse * 0.16, (1 - smooth(114.0, 114.8, t))); FX.flashCol = [1, 0.93, 0.9]; FX.ab = 0.0015 + pulse * 0.004; FX.lampPulse = pulse; FX.spark = 0.6; FX.sparkC = camera.position.clone(); FX.sparkR = 8;
 });
 // V — reality: broken car, walking away
 shot(128.0, 144.5, (t, lt) => {
@@ -803,8 +809,6 @@ shot(128.0, 144.5, (t, lt) => {
   cam(V(PARK.x + 3 - k * 3.5, 1.4 + up * 9, PARK.z + 8 + k * 1 + up * 6), V(lerp(PARK.x, -1.2, k), lerp(0.8, 1.2, k) + up * 2, lerp(PARK.z, z, k) - up * 12), 46);
   setDream(0.4 * up); FX.rain = 1; FX.sat = 0.75; FX.tint = [0.88, 0.95, 1.12];
   FX.fade = 1 - smooth(143.0, 144.5, t);
-  if (t > 136.4 && t < 141.6) { const m = overlay('o1', [{ text: 've arabaya bir şey oldu', font: 'italic 500 92px Corm', color: '#eef2ff', glow: 'rgba(120,150,255,0.8)', blur: 16, y: 0.5 }], 420, 0, -120); m.material.opacity = smooth(136.4, 137.2, t) * (1 - smooth(140.8, 141.6, t)); }
-  if (t > 141.7) { const m = overlay('o2', [{ text: 'kalbime değil.', font: 'italic 500 92px Corm', color: '#fff2f8', glow: 'rgba(255,140,200,0.9)', blur: 16, y: 0.5 }], 340, 0, -120); m.material.opacity = smooth(141.7, 142.4, t); }
 });
 // W — end card
 shot(144.5, 150.01, (t, lt) => {
@@ -814,22 +818,58 @@ shot(144.5, 150.01, (t, lt) => {
   const b = overlay('end2', [{ text: 'cennetten bi parça', font: 'italic 500 110px Corm', color: '#ffe8f3', glow: 'rgba(255,150,210,0.8)', blur: 20, y: 0.5 }], 360, 0, -32); b.material.opacity = o;
 });
 
+const LYRICS = [
+  [1.915, 5.346, 'Gelen olmadı, giden oldu hep'],
+  [5.346, 9.016, 'Kaldım kendime sebep kalmadı'],
+  [9.016, 12.527, 'Yağmur olmadı, çözüm olmadı'],
+  [12.527, 16.436, 'Kalbime serinlik desen olmadı'],
+  [16.436, 19.867, 'Bugün zorladım, ara gazladım'],
+  [19.867, 23.936, 'Arabayı çok kötü yerde bıraktım ama'],
+  [23.936, 28.165, 'Karşımda bir kadın var'],
+  [28.165, 31.915, 'Tarif edemem ama'],
+  [31.915, 35.824, 'Cennetten bir parça'],
+  [35.824, 39.335, 'Aşık oluyorum ona, ona galiba'],
+  [39.335, 42.926, 'Karşımda bir kadın var'],
+  [42.926, 46.596, 'Tarif edemem ama'],
+  [46.596, 50.266, 'Cennetten bir parça'],
+  [50.266, 56.2, 'Aşık oluyorum ona, ona galiba'],
+  [56.41, 61.0, 'Ona galiba'],
+  [62.0, 66.41, 'Ona galiba'],
+  [67.42, 68.856, 'Ona galiba'],
+  [68.856, 72.447, 'Karşımda bir kadın var'],
+  [72.447, 76.197, 'Tarif edemem ama'],
+  [76.197, 79.867, 'Cennetten bir parça'],
+  [79.867, 84.176, 'Aşık oluyorum ona, ona galiba'],
+  [84.176, 87.207, 'Karşımda bir kadın var'],
+  [87.207, 90.957, 'Tarif edemem ama'],
+  [90.957, 93.91, 'Cennetten bir parça'],
+  [93.91, 99.5, 'Aşık oluyorum ona, evet, ona galiba'],
+  [136.516, 141.702, 'Ve arabaya bir şey oldu'],
+  [141.702, 144.3, 'Kalbime değil']
+];
+function subtitles(t) {
+  LYRICS.forEach((L, i) => {
+    if (t < L[0] || t >= L[1]) return;
+    const m = overlay('ly' + i, [{ text: L[2], font: 'bold 60px FreeSans', color: '#f4f1e6', stroke: 10, strokeColor: '#0c0c0c', y: 0.5 }], 600, 0, -146, 1500);
+    m.material.opacity = smooth(L[0], L[0] + 0.12, t) * (1 - smooth(L[1] - 0.12, L[1], t));
+  });
+}
 // ---------- frame ----------
 const tmpC = new THREE.Color();
 function applyFX(t) {
   const d = DREAM;
   skyU.top.value.copy(N.top).lerp(D.top, d); skyU.hor.value.copy(N.hor).lerp(D.hor, d); skyU.bot.value.copy(N.bot).lerp(D.bot, d);
-  scene.fog.color.copy(N.fog).lerp(D.fog, d); scene.fog.near = lerp(8, 14, d); scene.fog.far = lerp(85, 150, d);
-  hemi.color.set(0x8090b0).lerp(col('#ffd0e4'), d); hemi.groundColor.set(0x202025).lerp(col('#c8a0c8'), d); hemi.intensity = lerp(2.0, 1.9, d);
-  moon.color.set(0xa8b8d8).lerp(col('#ffe0f0'), d); moon.intensity = lerp(1.7, 1.6, d);
+  scene.fog.color.copy(N.fog).lerp(D.fog, d); scene.fog.near = lerp(3, 10, d); scene.fog.far = lerp(55, 120, d);
+  hemi.color.set(0x8a93a8).lerp(col('#e6d2da'), d); hemi.groundColor.set(0x24252a).lerp(col('#9c8a96'), d); hemi.intensity = lerp(2.0, 1.6, d);
+  moon.color.set(0xa8b4c8).lerp(col('#f0e2e6'), d); moon.intensity = lerp(1.6, 1.3, d);
   sinkGroup.position.y = -60 * SINK * SINK; sinkGroup.visible = SINK < 0.98;
-  const co = clamp((d - 0.15) / 0.6); for (const m of cloudMats) m.opacity = co; clouds.visible = co > 0.01;
+  const co = clamp((d - 0.15) / 0.6) * 0.75; for (const m of cloudMats) m.opacity = co; clouds.visible = co > 0.01;
   heroLight.intensity = 9 * FX.hero * (DREAM > 0.9 ? 0.5 : 1);
   fillLight.intensity = 3 * FX.fill;
   lampGlowMat.opacity = 0.9 + FX.lampPulse * 0.5; coneMat.opacity = 0.045 + FX.lampPulse * 0.05 + d * 0.02;
-  lampGlowMat.color.set(0xffd9a0).lerp(col('#ffc0e0'), d * 0.6);
+  lampGlowMat.color.set(0xffd9a0).lerp(col('#f2d0d8'), d * 0.4);
   reflMat.opacity = 0.45 * (1 - SINK * 0.4);
-  roadMat.color.set(0xffffff).lerp(col('#e8c8dc'), d);
+  roadMat.color.set(0xffffff).lerp(col('#d8ccd2'), d);
   // car fx
   const u = car.userData;
   const hz = FX.hazard && (Math.floor(t * 2.4) % 2 === 0);
@@ -840,8 +880,8 @@ function applyFX(t) {
   u.wipers.forEach((w) => (w.rotation.set(-0.8, 0, wp * 1.55, 'XYZ')));
   u.smoke.forEach((s, i) => { const ph = ((t * 0.35 + i / u.smoke.length) % 1); s.visible = FX.smoke > 0.01; s.material.opacity = FX.smoke * 0.35 * Math.sin(ph * Math.PI); s.position.set(Math.sin(i * 3.1) * 0.3 + ph * 0.4, 1.0 + ph * 3.2, -1.4 + Math.cos(i * 1.7) * 0.25); s.scale.setScalar(0.6 + ph * 2.4); });
   // post
-  postU.flash.value = FX.flash; postU.ab.value = FX.ab; postU.bloom.value = lerp(FX.bloom, 0.75, d); postU.vig.value = FX.vig; postU.sat.value = lerp(FX.sat, 1.05, d);
-  const tn = FX.tint; postU.tint.value.set(lerp(tn[0], 1.06, d), lerp(tn[1], 0.98, d), lerp(tn[2], 1.02, d));
+  postU.flash.value = FX.flash; postU.ab.value = FX.ab; postU.bloom.value = lerp(FX.bloom, 0.55, d); postU.vig.value = FX.vig; postU.sat.value = lerp(FX.sat, 0.82, d) * 0.92;
+  const tn = FX.tint; postU.tint.value.set(lerp(tn[0], 1.04, d), lerp(tn[1], 0.99, d), lerp(tn[2], 0.98, d));
   postU.fade.value = FX.fade; postU.flashCol.value.set(...FX.flashCol); postU.seed.value = (t * 30) % 97;
 }
 
@@ -852,7 +892,7 @@ window.renderAt = function (t) {
   if (dtv > 0 && dtv < 0.2) rainClock += dtv * sp; else if (dtv !== 0) rainClock = t;
   lastT = t;
   reset(); s.fn(t, t - s.a);
-  applyFX(t);
+  subtitles(t); applyFX(t);
   sky.position.copy(camera.position);
   updateRain(camera.position, FX.rain, FX.rainLen);
   updateSparkles(t, FX.sparkC, FX.sparkR, FX.spark);
@@ -878,9 +918,7 @@ async function boot() {
 }
 // text meshes are built at import time; rebuild title textures after fonts load
 boot().then(() => {
-  for (const m of [titleBack, titleFront]) scene.remove(m);
-  const tb = textMesh([{ text: 'cennetten', font: 'italic 600 190px Corm', color: '#fff4fb', glow: 'rgba(255,170,215,0.9)', blur: 30, y: 0.52 }], { w: 9.0, cw: 1024, ch: 300 });
-  const tf = textMesh([{ text: 'bi parça', font: 'italic 600 190px Corm', color: '#fff4fb', glow: 'rgba(170,200,255,0.9)', blur: 30, y: 0.5 }], { w: 3.6, cw: 1024, ch: 300 });
+  const tb = textMesh(TITLE_L, TITLE_O), tf = textMesh(TITLE_L, { ...TITLE_O, clipTop: 0.56 });
   titleBack.geometry = tb.geometry; titleBack.material = tb.material; titleFront.geometry = tf.geometry; titleFront.material = tf.material;
-  scene.add(titleBack, titleFront);
+  titleBack.material.depthTest = true; titleFront.material.depthTest = false; titleFront.renderOrder = 50;
 });
