@@ -274,7 +274,7 @@ def shake_at(t):
     return (amp * (math.sin(t * 13.1) * 0.6 + math.sin(t * 31.7 + 1) * 0.4),
             amp * (math.sin(t * 17.3 + 2) * 0.6 + math.sin(t * 27.1) * 0.4)), jolt
 
-def frame(t):
+def incar(t):
     (cx, cy, cw), since_cut = camera_at(t)
     ch = cw * 4 / 3
     if in_chorus(t):                     # vuruşta hafif zoom
@@ -323,6 +323,9 @@ def frame(t):
         light = band[..., None] * lamp_col * strength * (0.35 + 0.9 * lu[..., None])
         img = 1 - (1 - img) * (1 - light)   # screen
 
+    return img, since_cut, jolt
+
+def post(img, t, since_cut, jolt):
     # renk
     mul, lift, sat = section_at(t)
     img = img * mul + lift
@@ -379,6 +382,90 @@ def frame(t):
         fade = 1.0
     img = img * fade
     return (np.clip(img, 0, 1) * 255).astype(np.uint8)
+
+# ---------------------------------------------------------------- AI sahneleri
+# sahneler/NN.jpg varsa o zaman aralığında araba içi çekim yerine o görsel kullanılır
+# (başlangıç, bitiş, dosya adı, hareket)
+AI_DIR = os.path.join(HERE, 'sahneler')
+AI_SCENES = [
+    (0.0,     5.346,  '01', 'in'),
+    (9.016,   12.527, '03', 'up'),
+    (12.527,  16.436, '04', 'in'),
+    (16.436,  19.867, '05', 'fast'),
+    (19.867,  23.936, '06', 'out'),
+    (23.936,  28.165, '07', 'in'),
+    (28.165,  31.915, '08', 'right'),
+    (31.915,  35.824, '09', 'up'),
+    (35.824,  39.335, '10', 'in'),
+    (39.335,  46.596, '11', 'out'),
+    (46.596,  50.266, '12', 'left'),
+    (50.266,  56.41,  '13', 'out'),
+    (56.41,   62.5,   '14', 'right'),
+    (62.5,    68.856, '15', 'left'),
+    (68.856,  76.197, '16', 'in'),
+    (76.197,  83.9,   '17', 'left'),
+    (83.9,    90.957, '18', 'in'),
+    (90.957,  98.5,   '19', 'out'),
+    (98.5,    105.9,  '20', 'up'),
+    (105.9,   113.3,  '21', 'in'),
+    (113.3,   120.7,  '22', 'right'),
+    (136.516, 141.702,'24', 'in'),
+    (141.702, END + 1,'25', 'out'),
+]
+AI_CACHE = {}
+BW, BH = int(W * 1.25), int(H * 1.25)
+
+def ai_scene(t):
+    for a, e, name, mv in AI_SCENES:
+        if a <= t < e:
+            for ext in ('.jpg', '.jpeg', '.png', '.webp'):
+                p = os.path.join(AI_DIR, name + ext)
+                if os.path.exists(p): return a, e, p, mv
+            return None
+    return None
+
+def ai_image(p):
+    if p not in AI_CACHE:
+        im = cv2.imread(p)
+        h, w = im.shape[:2]
+        if w / h > 3 / 4:                      # 3:4'e ortadan kırp
+            nw = int(h * 3 / 4); im = im[:, (w - nw) // 2:(w - nw) // 2 + nw]
+        else:
+            nh = int(w * 4 / 3); im = im[(h - nh) // 2:(h - nh) // 2 + nh]
+        AI_CACHE[p] = cv2.resize(im, (BW, BH), interpolation=cv2.INTER_AREA).astype(np.float32) / 255.0
+    return AI_CACHE[p]
+
+MOVES = {  # (merkez x, merkez y, ölçek) başlangıç -> bitiş; ölçek 1 = görselin tamamı
+    'in':    ((0.5, 0.5, 1.0),   (0.5, 0.47, 0.84)),
+    'out':   ((0.5, 0.47, 0.84), (0.5, 0.5, 1.0)),
+    'left':  ((0.56, 0.5, 0.88), (0.44, 0.5, 0.88)),
+    'right': ((0.44, 0.5, 0.88), (0.56, 0.5, 0.88)),
+    'up':    ((0.5, 0.56, 0.88), (0.5, 0.44, 0.88)),
+    'fast':  ((0.5, 0.5, 0.98),  (0.5, 0.5, 0.72)),
+}
+
+def ai_frame(sc, t):
+    a, e, p, mv = sc
+    src_im = ai_image(p)
+    u = (t - a) / (min(e, END) - a)
+    u = u if mv == 'fast' else ease(u)
+    (x0, y0, z0), (x1, y1, z1) = MOVES[mv]
+    z = z0 + (z1 - z0) * u
+    if in_chorus(t): z *= 1 - 0.02 * beat_pulse(t, 8)
+    cw, ch = BW * z, BH * z
+    (sx, sy), jolt = shake_at(t)
+    cx = (x0 + (x1 - x0) * u) * BW + sx * cw / W
+    cy = (y0 + (y1 - y0) * u) * BH + sy * cw / W
+    cx = min(max(cx, cw / 2), BW - cw / 2); cy = min(max(cy, ch / 2), BH - ch / 2)
+    sc_ = cw / W
+    M = np.float32([[sc_, 0, cx - cw / 2], [0, sc_, cy - ch / 2]])
+    img = cv2.warpAffine(src_im, M, (W, H), flags=cv2.INTER_LINEAR | cv2.WARP_INVERSE_MAP, borderMode=cv2.BORDER_REFLECT)
+    return img, t - a, jolt
+
+def frame(t):
+    sc = ai_scene(t)
+    img, since_cut, jolt = ai_frame(sc, t) if sc else incar(t)
+    return post(img, t, since_cut, jolt)
 
 # ---------------------------------------------------------------- çıktı
 def main():
