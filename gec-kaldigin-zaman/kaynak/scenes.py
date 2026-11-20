@@ -279,35 +279,41 @@ D_BG = None
 def scene_d(t):
     global D_BG
     if D_BG is None:
-        D_BG = pixup(floral(120, 214, 21), (W, H)).convert('RGBA')
-        d = ImageDraw.Draw(D_BG)
-        d.rectangle((0, 0, W, 28), fill=(80, 46, 24))
-    img = D_BG.copy()
-    s = 1.05
+        D_BG = pixup(floral(110, 196, 21), (W + 40, H + 40)).convert('RGBA')
+    img = D_BG.crop((20, 20, 20 + W, 20 + H))
+    s = 1.08
     up, fo, ha, fe, shn, ft = lens(FRONT, s)
-    fl = math.sin(t * 2 * math.pi * 3.2)                    # frantic flailing
-    neck = np.array([350.0 + 6 * fl, 330.0])
-    hip = np.array([330.0, 330.0 + 324 * s * 0.98])
+    f1 = math.sin(t * 2 * math.pi * 3.0)                    # arms
+    f2 = math.sin(t * 2 * math.pi * 2.4 + 1.3)              # legs kick out of phase
+    f3 = math.sin(t * 2 * math.pi * 4.1 + 0.4)              # head shake
+    neck = np.array([352.0 + 4 * f3, 360.0 + 3 * f2])
+    hip = np.array([360.0, neck[1] + 324 * s * 0.97])
     P = lambda k: tpt(neck, hip, FRONT, FRONT[k], s)
     sk = Image.new('RGBA', (W, H), (0, 0, 0, 0))
-    # legs: one knee out to the side, the other bent across
-    limb(sk, S, 'f', 'R', 'leg', chain(P('hipR'), [130 + 8 * fl, 60, 160], [fe, shn, ft * 0.7]), s)
-    limb(sk, S, 'f', 'L', 'leg', chain(P('hipL'), [75 - 10 * fl, 150, 100], [fe, shn * 0.95, ft * 0.7]), s)
+    # legs: knees thrown out to the sides, kicking alternately
+    limb(sk, S, 'f', 'R', 'leg', chain(P('hipR'), [128 + 10 * f2, 72 - 14 * f2, 95], [fe, shn, ft * 0.75]), s)
+    limb(sk, S, 'f', 'L', 'leg', chain(P('hipL'), [52 + 10 * f2, 108 - 14 * f2, 85], [fe, shn, ft * 0.75]), s)
     torso(sk, S, 'torso_f', neck, hip, s, FRONT)
-    chin = neck + np.array([6, -4])
-    ang = math.radians(-78 + 6 * fl)
-    size = 95 * s * 1.5
+    chin = neck + np.array([0, -2])
+    ang = math.radians(-96 + 9 * f3)
+    size = 95 * s * 1.55
     skull(sk, S, 'skull_cu', chin, ang, size, SKULL_CU)
-    googly(sk, chin, ang, size, 1.0, t)
-    # right arm up waving next to the head, left arm across the chest + waving hand
-    elR = P('shR') + up * dirv(-120 + 12 * fl)
-    wrR = elR + fo * dirv(-80 + 20 * fl)
-    limb(sk, S, 'f', 'R', 'arm', [P('shR'), elR, wrR, wrR + ha * dirv(-100 + 35 * fl)], s)
-    elL, wrL = ik(P('shL'), neck + np.array([-20, 150]), up, fo, 1)
-    limb(sk, S, 'f', 'L', 'arm', [P('shL'), elL, wrL, wrL + ha * dirv(-20 - 35 * fl)], s)
+    googly(sk, chin, ang, size, 1.25, t)
+    # screen-left arm thrown up past the head, hand waving
+    elR = P("shR") + up * dirv(-150 + 8 * f1)
+    wrR = elR + fo * dirv(-100 + 22 * f1)
+    limb(sk, S, 'f', 'R', 'arm', [P('shR'), elR, wrR, wrR + ha * dirv(-95 + 40 * f1)], s)
+    # screen-right arm out to the side, flapping
+    elL = P('shL') + up * dirv(18 - 10 * f1)
+    wrL = elL + fo * dirv(-42 - 28 * f1)
+    limb(sk, S, 'f', 'L', 'arm', [P('shL'), elL, wrL, wrL + ha * dirv(-55 - 45 * f1)], s)
     sk = brighten(sk, 1.3, 14)
-    img.alpha_composite(layer_shadow(sk, 12, 16, 8, 0.6))
-    img.alpha_composite(sk)
-    sh = np.array([math.sin(t * 61), math.cos(t * 53)]) * 4
-    img = ImageChops.offset(img, int(sh[0]), int(sh[1]))
+    shake = np.array([math.sin(t * 61), math.cos(t * 53)]) * 5
+    sh = layer_shadow(sk, 14, 18, 9, 0.6)
+    img.alpha_composite(sh, (int(shake[0]), int(shake[1])))
+    img.alpha_composite(sk, (int(shake[0]), int(shake[1])))
+    # slow push-in
+    z = 1 + 0.05 * (t / 2.0)
+    cw, ch = int(W / z), int(H / z)
+    img = img.crop(((W - cw) // 2, int((H - ch) * 0.45), (W - cw) // 2 + cw, int((H - ch) * 0.45) + ch)).resize((W, H), Image.BICUBIC)
     return post(img, int(t * 30) + 600, grade=(1.0, 0.97, 0.92), vign=0.45)
