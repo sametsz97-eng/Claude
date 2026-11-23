@@ -1,5 +1,4 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
-
+import '../../core/realtime_bridge.dart';
 import '../../core/supabase.dart';
 
 class ChatMessage {
@@ -94,36 +93,24 @@ class ChatRepository {
   );
 
   /// Yeni mesajlar ve sohbetin bitişi (Realtime, RLS ile filtrelenir).
-  RealtimeChannel subscribe({
+  RowSubscription subscribe({
     required void Function(ChatMessage) onMessage,
     required void Function() onEnded,
   }) {
-    return supabase
-        .channel('chat-$matchId')
-        .onPostgresChanges(
-          event: PostgresChangeEvent.insert,
-          schema: 'public',
+    return RealtimeBridge.instance.listen(
+      [
+        RowListener(
           table: 'messages',
-          filter: PostgresChangeFilter(
-            type: PostgresChangeFilterType.eq,
-            column: 'match_id',
-            value: matchId,
-          ),
-          callback: (p) => onMessage(ChatMessage.fromJson(p.newRecord)),
-        )
-        .onPostgresChanges(
-          event: PostgresChangeEvent.update,
-          schema: 'public',
-          table: 'matches',
-          filter: PostgresChangeFilter(
-            type: PostgresChangeFilterType.eq,
-            column: 'id',
-            value: matchId,
-          ),
-          callback: (p) {
-            if (p.newRecord['status'] == 'ended') onEnded();
-          },
-        )
-        .subscribe();
+          event: RowEvent.insert,
+          eqColumn: 'match_id',
+          eqValue: matchId,
+        ),
+        RowListener(table: 'matches', event: RowEvent.update, eqColumn: 'id', eqValue: matchId),
+      ],
+      (table, row) {
+        if (table == 'messages') onMessage(ChatMessage.fromJson(row));
+        if (table == 'matches' && row['status'] == 'ended') onEnded();
+      },
+    );
   }
 }

@@ -1,5 +1,4 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
-
+import '../../core/realtime_bridge.dart';
 import '../../core/supabase.dart';
 
 /// Sunucudaki join_queue / heartbeat_queue cevabı.
@@ -43,18 +42,13 @@ class MatchingRepository {
   Future<void> leave() => supabase.rpc('leave_queue');
 
   /// Yeni eşleşme oluştuğunda tetiklenir (RLS sayesinde sadece kendi eşleşmelerin gelir).
-  RealtimeChannel subscribeToNewMatches(void Function(String matchId) onMatch) {
-    return supabase
-        .channel('my-matches-${DateTime.now().microsecondsSinceEpoch}')
-        .onPostgresChanges(
-          event: PostgresChangeEvent.insert,
-          schema: 'public',
-          table: 'matches',
-          callback: (payload) {
-            final id = payload.newRecord['id'];
-            if (id is String) onMatch(id);
-          },
-        )
-        .subscribe();
+  RowSubscription subscribeToNewMatches(void Function(String matchId) onMatch) {
+    return RealtimeBridge.instance.listen(
+      const [RowListener(table: 'matches', event: RowEvent.insert)],
+      (_, row) {
+        final id = row['id'];
+        if (id is String) onMatch(id);
+      },
+    );
   }
 }

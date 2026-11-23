@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../core/config.dart';
 import '../../core/errors.dart';
 import '../../core/supabase.dart';
 import '../common/status_screens.dart';
@@ -53,6 +54,15 @@ class _OtpScreenState extends State<OtpScreen> with BusyState {
           children: [
             const Text('Telefonuna gelen 6 haneli kodu gir.'),
             const SizedBox(height: 16),
+            if (AppConfig.demoMode) ...[
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Text('🧪 Demo: herhangi 6 haneli bir kod çalışır (ör. 123456).'),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
             TextField(
               controller: _controller,
               keyboardType: TextInputType.number,

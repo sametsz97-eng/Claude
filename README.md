@@ -130,6 +130,18 @@ supabase/tests/run_local.sh
 cd app && flutter analyze && flutter test
 ```
 
+### 5. Tarayıcı demosu (sunucusuz)
+
+Uygulamanın gerçek ekranlarını Supabase'e bağlanmadan tarayıcıda gösterir. Veriler bellek içindeki sahte bir backend'de tutulur (`app/lib/demo/`). Otomatik cevap veren demo bir sohbet arkadaşı vardır, arkadaşlık isteklerini de kabul eder. Sayfa yenilenince her şey sıfırlanır.
+
+```bash
+cd app
+flutter run -d chrome -t lib/demo/main_demo.dart   # geliştirme
+./tool/build_web_demo.sh                           # build/web_demo/ altında kendi kendine yeten statik site
+```
+
+Gerçek uygulama Realtime aboneliklerini `RealtimeBridge` üzerinden açar. Demo bu katmanı bellek içi bir sürümle değiştirir; üretim kodunun davranışı değişmez.
+
 ## Yoti / FaceTec entegrasyonu
 
 1. **Flutter:** `VerificationService` arayüzünü uygulayan bir sınıf yazın (ör. `YotiVerificationService`). Sağlayıcının SDK'sını açsın ve sonunda `VerificationResult.success(sessionToken)` dönsün. `usesInAppCameraPreview` değeri `false` olmalı. Ardından `main.dart` içinde `MockVerificationService` yerine bu sınıfı kullanın.

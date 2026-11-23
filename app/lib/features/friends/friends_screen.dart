@@ -1,6 +1,7 @@
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../../core/realtime_bridge.dart';
 
 import '../../core/errors.dart';
 import '../chat/chat_widgets.dart';
@@ -16,7 +17,7 @@ class FriendsScreen extends StatefulWidget {
 
 class _FriendsScreenState extends State<FriendsScreen> with BusyState {
   final _repo = FriendsRepository();
-  RealtimeChannel? _channel;
+  RowSubscription? _channel;
   FriendsOverview? _data;
   String? _error;
 
@@ -29,7 +30,7 @@ class _FriendsScreenState extends State<FriendsScreen> with BusyState {
 
   @override
   void dispose() {
-    if (_channel != null) Supabase.instance.client.removeChannel(_channel!);
+    _channel?.cancel();
     super.dispose();
   }
 

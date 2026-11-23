@@ -2,7 +2,8 @@ import 'dart:async';
 
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../../core/realtime_bridge.dart';
 
 import '../../core/errors.dart';
 import '../../core/format.dart';
@@ -22,7 +23,7 @@ class WaitingScreen extends StatefulWidget {
 class _WaitingScreenState extends State<WaitingScreen> with WidgetsBindingObserver {
   final _repo = MatchingRepository();
   Timer? _timer;
-  RealtimeChannel? _channel;
+  RowSubscription? _channel;
   QueueStatus? _status;
   bool _matched = false;
   bool _leaving = false;
@@ -88,7 +89,7 @@ class _WaitingScreenState extends State<WaitingScreen> with WidgetsBindingObserv
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _timer?.cancel();
-    if (_channel != null) Supabase.instance.client.removeChannel(_channel!);
+    _channel?.cancel();
     if (!_matched && !_leaving) _repo.leave().catchError((_) {});
     super.dispose();
   }

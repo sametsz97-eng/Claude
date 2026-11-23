@@ -24,7 +24,7 @@ class MockVerificationService implements VerificationService {
     if (alwaysFail) {
       return const VerificationResult.failure('Yüzün algılanamadı. Lütfen tekrar dene.');
     }
-    final nonce = Random.secure().nextInt(1 << 32).toRadixString(16);
+    final nonce = Random.secure().nextInt(0x7fffffff).toRadixString(16);
     return VerificationResult.success('mock-ok:$nonce');
   }
 }

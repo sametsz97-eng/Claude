@@ -1,6 +1,7 @@
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../../core/realtime_bridge.dart';
 
 import '../../core/errors.dart';
 import '../chat/chat_repository.dart';
@@ -24,7 +25,7 @@ class _FriendChatScreenState extends State<FriendChatScreen> with BusyState {
   final _scroll = ScrollController();
   final List<ChatMessage> _messages = [];
   final Set<int> _ids = {};
-  RealtimeChannel? _channel;
+  RowSubscription? _channel;
   FriendshipInfo? _info;
   bool _removed = false;
   String? _loadError;
@@ -135,7 +136,7 @@ class _FriendChatScreenState extends State<FriendChatScreen> with BusyState {
 
   @override
   void dispose() {
-    if (_channel != null) Supabase.instance.client.removeChannel(_channel!);
+    _channel?.cancel();
     _input.dispose();
     _scroll.dispose();
     super.dispose();

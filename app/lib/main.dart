@@ -27,10 +27,18 @@ Future<void> main() async {
 }
 
 class AnonimSohbetApp extends StatefulWidget {
-  const AnonimSohbetApp({super.key, required this.session, required this.verification});
+  const AnonimSohbetApp({
+    super.key,
+    required this.session,
+    required this.verification,
+    this.builder,
+  });
 
   final AppSession session;
   final VerificationService verification;
+
+  /// İsteğe bağlı sarmalayıcı (ör. tarayıcı demosunda telefon çerçevesi).
+  final TransitionBuilder? builder;
 
   @override
   State<AnonimSohbetApp> createState() => _AnonimSohbetAppState();
@@ -56,6 +64,7 @@ class _AnonimSohbetAppState extends State<AnonimSohbetApp> {
             ),
           ),
           routerConfig: _router,
+          builder: widget.builder,
         ),
       ),
     );

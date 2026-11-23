@@ -1,5 +1,4 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
-
+import '../../core/realtime_bridge.dart';
 import '../../core/supabase.dart';
 import '../chat/chat_repository.dart';
 
@@ -156,52 +155,40 @@ class FriendsRepository {
   });
 
   /// Arkadaş sohbeti: yeni mesajlar ve arkadaşlığın kaldırılması.
-  RealtimeChannel subscribeChat(
+  RowSubscription subscribeChat(
     String friendshipId, {
     required void Function(ChatMessage) onMessage,
     required void Function() onRemoved,
   }) {
-    return supabase
-        .channel('friend-chat-$friendshipId')
-        .onPostgresChanges(
-          event: PostgresChangeEvent.insert,
-          schema: 'public',
+    return RealtimeBridge.instance.listen(
+      [
+        RowListener(
           table: 'friend_messages',
-          filter: PostgresChangeFilter(
-            type: PostgresChangeFilterType.eq,
-            column: 'friendship_id',
-            value: friendshipId,
-          ),
-          callback: (p) => onMessage(ChatMessage.fromJson(p.newRecord)),
-        )
-        .onPostgresChanges(
-          event: PostgresChangeEvent.update,
-          schema: 'public',
+          event: RowEvent.insert,
+          eqColumn: 'friendship_id',
+          eqValue: friendshipId,
+        ),
+        RowListener(
           table: 'friendships',
-          filter: PostgresChangeFilter(
-            type: PostgresChangeFilterType.eq,
-            column: 'id',
-            value: friendshipId,
-          ),
-          callback: (p) {
-            if (p.newRecord['removed_at'] != null) onRemoved();
-          },
-        )
-        .subscribe();
+          event: RowEvent.update,
+          eqColumn: 'id',
+          eqValue: friendshipId,
+        ),
+      ],
+      (table, row) {
+        if (table == 'friend_messages') onMessage(ChatMessage.fromJson(row));
+        if (table == 'friendships' && row['removed_at'] != null) onRemoved();
+      },
+    );
   }
 
   /// Arkadaş listesini/rozeti tazelemek için: yeni istek, kabul, silme, yeni mesaj.
   /// (RLS sayesinde sadece kendi satırların gelir.)
-  RealtimeChannel subscribeOverview(void Function() onChange) {
-    var channel = supabase.channel('friends-${DateTime.now().microsecondsSinceEpoch}');
-    for (final table in ['friend_requests', 'friendships', 'friend_messages']) {
-      channel = channel.onPostgresChanges(
-        event: PostgresChangeEvent.all,
-        schema: 'public',
-        table: table,
-        callback: (_) => onChange(),
-      );
-    }
-    return channel.subscribe();
+  RowSubscription subscribeOverview(void Function() onChange) {
+    return RealtimeBridge.instance.listen(const [
+      RowListener(table: 'friend_requests', event: RowEvent.all),
+      RowListener(table: 'friendships', event: RowEvent.all),
+      RowListener(table: 'friend_messages', event: RowEvent.all),
+    ], (_, _) => onChange());
   }
 }

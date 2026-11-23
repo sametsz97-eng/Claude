@@ -60,6 +60,7 @@ class MessageComposer extends StatelessWidget {
               minLines: 1,
               maxLines: 4,
               textCapitalization: TextCapitalization.sentences,
+              textInputAction: TextInputAction.send,
               decoration: const InputDecoration(
                 hintText: 'Mesaj yaz…',
                 border: OutlineInputBorder(),

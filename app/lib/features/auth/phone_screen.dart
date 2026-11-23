@@ -1,6 +1,7 @@
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../core/config.dart';
 import '../../core/errors.dart';
 import '../../core/phone.dart';
 import '../../core/supabase.dart';
@@ -60,6 +61,17 @@ class _PhoneScreenState extends State<PhoneScreen> with BusyState {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 32),
+            if (AppConfig.demoMode) ...[
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Text(
+                    '🧪 Demo: herhangi bir cep numarası gir (ör. 532 123 45 67). SMS gönderilmez.',
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
             TextField(
               controller: _controller,
               keyboardType: TextInputType.phone,

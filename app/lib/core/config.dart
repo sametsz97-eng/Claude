@@ -7,5 +7,8 @@ class AppConfig {
   /// KVKK/18 yaş metin sürümü. Sunucudaki private.consent_version() ile aynı olmalı.
   static const consentVersion = 'kvkk-v1';
 
+  /// Tarayıcı demosu (lib/demo/main_demo.dart) açık mı?
+  static bool demoMode = false;
+
   static bool get isConfigured => supabaseUrl.isNotEmpty && supabasePublishableKey.isNotEmpty;
 }
