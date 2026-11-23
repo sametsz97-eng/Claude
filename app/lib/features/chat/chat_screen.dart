@@ -30,6 +30,10 @@ class _ChatScreenState extends State<ChatScreen> with BusyState {
   RowSubscription? _channel;
   MatchInfo? _match;
   bool _ended = false;
+
+  /// Sohbeti bu kullanıcı mı bitirdi (bitir/engelle/şikâyet)? RPC'den önce ayarlanır,
+  /// çünkü Realtime "bitti" olayı RPC cevabından önce gelebilir.
+  bool _endedByMe = false;
   bool _friendRequested = false;
   String? _loadError;
 
@@ -102,6 +106,7 @@ class _ChatScreenState extends State<ChatScreen> with BusyState {
   Future<void> _endChat() async {
     final session = SessionScope.of(context);
     await runBusy(() async {
+      _endedByMe = true;
       await _repo.end();
       setState(() => _ended = true);
       await session.refresh();
@@ -116,6 +121,7 @@ class _ChatScreenState extends State<ChatScreen> with BusyState {
     if (!ok || !mounted) return;
     final session = SessionScope.of(context);
     await runBusy(() async {
+      _endedByMe = true;
       await _repo.block();
       setState(() => _ended = true);
       showError('Kullanıcı engellendi.');
@@ -128,6 +134,7 @@ class _ChatScreenState extends State<ChatScreen> with BusyState {
     if (selection == null || !mounted) return;
     final session = SessionScope.of(context);
     await runBusy(() async {
+      _endedByMe = true;
       await _repo.report(selection.category, selection.note);
       setState(() => _ended = true);
       showError('Şikâyetin alındı. Bu kişiyle bir daha eşleşmeyeceksin.');
@@ -239,7 +246,7 @@ class _ChatScreenState extends State<ChatScreen> with BusyState {
                   child: Column(
                     children: [
                       Text(
-                        match?.endedByMe == true || busy
+                        _endedByMe || match?.endedByMe == true
                             ? 'Sohbet sona erdi.'
                             : 'Sohbet sona erdi. Karşı taraf ayrıldı.',
                         textAlign: TextAlign.center,
