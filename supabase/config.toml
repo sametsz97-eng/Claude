@@ -1,0 +1,50 @@
+# Yerel geliştirme için Supabase CLI ayarları (supabase start).
+project_id = "anonim-sohbet"
+
+[api]
+enabled = true
+port = 54321
+# "private" şeması bilerek YOK: API'den erişilemez.
+schemas = ["public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 200
+
+[db]
+port = 54322
+major_version = 15
+
+[realtime]
+enabled = true
+
+[auth]
+enabled = true
+site_url = "http://localhost:3000"
+jwt_expiry = 3600
+enable_signup = true
+
+[auth.email]
+enable_signup = false
+
+[auth.sms]
+enable_signup = true
+enable_confirmations = true
+template = "Anonim Sohbet doğrulama kodunuz: {{ .Code }}"
+max_frequency = "60s"
+
+# Yerelde gerçek SMS göndermeden test: bu numaralar sabit kod alır.
+[auth.sms.test_otp]
+905550000001 = "123456"
+905550000002 = "123456"
+
+# Üretimde bir sağlayıcı açın (örnek: Twilio). Gizli anahtarları .env'de tutun.
+[auth.sms.twilio]
+enabled = false
+account_sid = ""
+message_service_sid = ""
+auth_token = "env(SUPABASE_AUTH_SMS_TWILIO_AUTH_TOKEN)"
+
+[auth.rate_limit]
+sms_sent = 30
+
+[functions.confirm-verification]
+verify_jwt = true
