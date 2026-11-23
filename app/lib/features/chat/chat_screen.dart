@@ -6,7 +6,9 @@ import '../../core/errors.dart';
 import '../../services/app_session.dart';
 import '../common/status_screens.dart';
 import '../matching/matching_repository.dart';
+import '../friends/friends_repository.dart';
 import 'chat_repository.dart';
+import 'chat_widgets.dart';
 import 'report_sheet.dart';
 
 class ChatScreen extends StatefulWidget {
@@ -27,6 +29,7 @@ class _ChatScreenState extends State<ChatScreen> with BusyState {
   RealtimeChannel? _channel;
   MatchInfo? _match;
   bool _ended = false;
+  bool _friendRequested = false;
   String? _loadError;
 
   @override
@@ -131,6 +134,18 @@ class _ChatScreenState extends State<ChatScreen> with BusyState {
     }, onError: (e) => showError(friendlyError(e)));
   }
 
+  Future<void> _addFriend() async {
+    await runBusy(() async {
+      final r = await FriendsRepository().sendRequest(widget.matchId);
+      setState(() => _friendRequested = true);
+      showError(
+        r.accepted
+            ? 'Artık arkadaşsınız! 🎉 Arkadaşlar sayfasından yazışabilirsin.'
+            : 'Arkadaşlık isteği gönderildi. Bugün ${r.remainingToday} hakkın kaldı.',
+      );
+    }, onError: (e) => showError(friendlyError(e)));
+  }
+
   Future<void> _newChat() async {
     final session = SessionScope.of(context);
     await runBusy(() async {
@@ -144,20 +159,7 @@ class _ChatScreenState extends State<ChatScreen> with BusyState {
     }, onError: (e) => showError(friendlyError(e)));
   }
 
-  Future<bool> _confirm(String title, String body) async {
-    final r = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(title),
-        content: Text(body),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Vazgeç')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(title)),
-        ],
-      ),
-    );
-    return r ?? false;
-  }
+  Future<bool> _confirm(String title, String body) => confirmDialog(context, title, body);
 
   @override
   void dispose() {
@@ -203,9 +205,13 @@ class _ChatScreenState extends State<ChatScreen> with BusyState {
                     _block();
                   case 'report':
                     _report();
+                  case 'friend':
+                    _addFriend();
                 }
               },
               itemBuilder: (_) => [
+                if (!_friendRequested)
+                  const PopupMenuItem(value: 'friend', child: Text('Arkadaş ekle')),
                 if (!_ended) const PopupMenuItem(value: 'end', child: Text('Sohbeti bitir')),
                 const PopupMenuItem(value: 'block', child: Text('Engelle')),
                 const PopupMenuItem(value: 'report', child: Text('Şikâyet et')),
@@ -217,17 +223,12 @@ class _ChatScreenState extends State<ChatScreen> with BusyState {
           child: Column(
             children: [
               Expanded(
-                child: _loadError != null
-                    ? Center(child: Text(_loadError!))
-                    : ListView.builder(
-                        controller: _scroll,
-                        padding: const EdgeInsets.all(12),
-                        itemCount: _messages.length,
-                        itemBuilder: (_, i) {
-                          final m = _messages[i];
-                          return _Bubble(message: m, mine: m.senderId == _repo.myId);
-                        },
-                      ),
+                child: MessageList(
+                  messages: _messages,
+                  myId: _repo.myId,
+                  controller: _scroll,
+                  error: _loadError,
+                ),
               ),
               if (_ended)
                 Container(
@@ -242,6 +243,14 @@ class _ChatScreenState extends State<ChatScreen> with BusyState {
                             : 'Sohbet sona erdi. Karşı taraf ayrıldı.',
                         textAlign: TextAlign.center,
                       ),
+                      if (!_friendRequested) ...[
+                        const SizedBox(height: 8),
+                        TextButton.icon(
+                          onPressed: busy ? null : _addFriend,
+                          icon: const Icon(Icons.person_add_alt_1),
+                          label: const Text('Arkadaş olarak ekle'),
+                        ),
+                      ],
                       const SizedBox(height: 12),
                       Row(
                         children: [
@@ -264,58 +273,9 @@ class _ChatScreenState extends State<ChatScreen> with BusyState {
                   ),
                 )
               else
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 4, 8, 8),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _input,
-                          minLines: 1,
-                          maxLines: 4,
-                          textCapitalization: TextCapitalization.sentences,
-                          decoration: const InputDecoration(
-                            hintText: 'Mesaj yaz…',
-                            border: OutlineInputBorder(),
-                            isDense: true,
-                          ),
-                          onSubmitted: (_) => _send(),
-                        ),
-                      ),
-                      IconButton.filled(onPressed: _send, icon: const Icon(Icons.send)),
-                    ],
-                  ),
-                ),
+                MessageComposer(controller: _input, onSend: _send),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _Bubble extends StatelessWidget {
-  const _Bubble({required this.message, required this.mine});
-
-  final ChatMessage message;
-  final bool mine;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Align(
-      alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 3),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
-        decoration: BoxDecoration(
-          color: mine ? scheme.primary : scheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Text(
-          message.body,
-          style: TextStyle(color: mine ? scheme.onPrimary : scheme.onSurface),
         ),
       ),
     );

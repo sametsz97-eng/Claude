@@ -57,6 +57,10 @@ void main() {
       friendlyError(const PostgrestException(message: 'verification_required')),
       'Önce selfie doğrulamasını tamamlamalısın.',
     );
+    expect(
+      friendlyError(const PostgrestException(message: 'friend_daily_limit')),
+      'Bugünkü 3 arkadaş ekleme hakkını doldurdun. Yarın tekrar dene.',
+    );
     expect(friendlyError(Exception('x')), 'Bir hata oluştu. Lütfen tekrar dene.');
   });
 
@@ -82,6 +86,15 @@ void main() {
       expect(computeRedirect(ready, state(), '/verify'), '/home');
       expect(computeRedirect(ready, state(), '/waiting'), isNull);
       expect(computeRedirect(ready, state(), '/chat/eski'), isNull);
+      expect(computeRedirect(ready, state(), '/friends'), isNull);
+      expect(computeRedirect(ready, state(), '/friends/f1'), isNull);
+    });
+    test('aktif sohbet varken arkadaş ekranına gidilmez', () {
+      expect(computeRedirect(ready, state(match: 'abc'), '/friends'), '/chat/abc');
+    });
+    test('doğrulanmamış kullanıcı arkadaş ekranına gidemez', () {
+      expect(computeRedirect(ready, state(reverify: true), '/friends/f1'), '/verify');
+      expect(computeRedirect(ready, state(banned: true), '/friends'), '/banned');
     });
   });
 }

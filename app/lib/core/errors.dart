@@ -16,6 +16,12 @@ const _messages = <String, String>{
   'too_many_attempts': 'Çok fazla doğrulama denemesi. 1 saat sonra tekrar dene.',
   'match_not_found': 'Sohbet bulunamadı.',
   'identity_missing': 'Bu kullanıcı artık mevcut değil.',
+  'friend_daily_limit': 'Bugünkü 3 arkadaş ekleme hakkını doldurdun. Yarın tekrar dene.',
+  'friend_request_pending': 'Bu kişiye zaten arkadaşlık isteği gönderdin.',
+  'friend_request_not_found': 'Bu istek artık geçerli değil.',
+  'already_friends': 'Zaten arkadaşsınız.',
+  'friend_blocked': 'Bu kişiyle arkadaş olamazsın.',
+  'friendship_not_found': 'Bu arkadaşlık artık mevcut değil.',
   'provider_error': 'Doğrulama servisine ulaşılamadı. Lütfen tekrar dene.',
 };
 

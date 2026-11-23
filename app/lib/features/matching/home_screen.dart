@@ -1,10 +1,12 @@
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/errors.dart';
 import '../../core/supabase.dart';
 import '../../services/app_session.dart';
 import '../common/status_screens.dart';
+import '../friends/friends_repository.dart';
 import 'matching_repository.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -16,6 +18,36 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> with BusyState {
   final _repo = MatchingRepository();
+  final _friends = FriendsRepository();
+  RealtimeChannel? _friendsChannel;
+  int _incomingRequests = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _friendsChannel = _friends.subscribeOverview(_loadFriendBadge);
+    _loadFriendBadge();
+  }
+
+  @override
+  void dispose() {
+    if (_friendsChannel != null) Supabase.instance.client.removeChannel(_friendsChannel!);
+    super.dispose();
+  }
+
+  Future<void> _loadFriendBadge() async {
+    try {
+      final o = await _friends.overview();
+      if (mounted) setState(() => _incomingRequests = o.incoming.length);
+    } catch (_) {
+      // Rozet kritik değil; hata sessizce yok sayılır.
+    }
+  }
+
+  Future<void> _openFriends() async {
+    await context.push('/friends');
+    _loadFriendBadge();
+  }
 
   Future<void> _findChat() async {
     final session = SessionScope.of(context);
@@ -74,6 +106,15 @@ class _HomeScreenState extends State<HomeScreen> with BusyState {
       appBar: AppBar(
         title: const Text('Anonim Sohbet'),
         actions: [
+          IconButton(
+            tooltip: 'Arkadaşlar',
+            onPressed: _openFriends,
+            icon: Badge(
+              isLabelVisible: _incomingRequests > 0,
+              label: Text('$_incomingRequests'),
+              child: const Icon(Icons.people_outline),
+            ),
+          ),
           PopupMenuButton<String>(
             onSelected: (v) {
               if (v == 'logout') session.signOut();

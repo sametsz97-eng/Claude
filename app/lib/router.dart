@@ -5,6 +5,8 @@ import 'features/auth/phone_screen.dart';
 import 'features/ban/banned_screen.dart';
 import 'features/chat/chat_screen.dart';
 import 'features/common/status_screens.dart';
+import 'features/friends/friend_chat_screen.dart';
+import 'features/friends/friends_screen.dart';
 import 'features/matching/home_screen.dart';
 import 'features/matching/waiting_screen.dart';
 import 'features/onboarding/consent_screen.dart';
@@ -46,6 +48,7 @@ String? computeRedirect(SessionPhase phase, SessionState? s, String location) {
   // Biten bir sohbetin ekranında kalabilir (şikâyet/engelle için).
   if (location.startsWith('/chat/')) return null;
   if (location == '/home' || location == '/waiting') return null;
+  if (location == '/friends' || location.startsWith('/friends/')) return null;
   return '/home';
 }
 
@@ -68,6 +71,11 @@ GoRouter buildRouter(AppSession session) => GoRouter(
     GoRoute(path: '/banned', builder: (_, _) => const BannedScreen()),
     GoRoute(path: '/home', builder: (_, _) => const HomeScreen()),
     GoRoute(path: '/waiting', builder: (_, _) => const WaitingScreen()),
+    GoRoute(path: '/friends', builder: (_, _) => const FriendsScreen()),
+    GoRoute(
+      path: '/friends/:id',
+      builder: (_, st) => FriendChatScreen(friendshipId: st.pathParameters['id']!),
+    ),
     GoRoute(
       path: '/chat/:id',
       builder: (_, st) => ChatScreen(matchId: st.pathParameters['id']!),
